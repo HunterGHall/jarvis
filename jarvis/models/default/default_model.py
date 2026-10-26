@@ -4,6 +4,18 @@ import re
 import sys
 from configparser import ConfigParser
 from pathlib import Path
+from current_date import get_date
+from current_time import get_time
+from current_weather import get_weather
+from air_quality import get_air_quality
+from dictionary import define
+from finance import convert_currency, get_crypto_price, get_stock_price
+from forecast import get_daily_forecast, get_hourly_forecast
+from media_control import MEDIA_KEYS, get_now_playing, media_control
+from scores import LEAGUES, get_scores
+from sun_moon import get_sun_and_moon
+from system_specifications import get_system_specifications
+from system_status import get_system_status
 
 # Resolve paths relative to this file, not the working directory
 MODELS_DIR = Path(__file__).resolve().parent.parent
@@ -49,18 +61,7 @@ for folder in UTILITIES_DIR.iterdir():
     if folder.is_dir():
         sys.path.append(str(folder))
 
-from current_date import get_date
-from current_time import get_time
-from current_weather import get_weather
-from air_quality import get_air_quality
-from dictionary import define
-from finance import convert_currency, get_crypto_price, get_stock_price
-from forecast import get_daily_forecast, get_hourly_forecast
-from media_control import MEDIA_KEYS, get_now_playing, media_control
-from scores import LEAGUES, get_scores
-from sun_moon import get_sun_and_moon
-from system_specifications import get_system_specifications
-from system_status import get_system_status
+
 
 UTILITY_FUNCTIONS = {
     "get_air_quality": get_air_quality,
