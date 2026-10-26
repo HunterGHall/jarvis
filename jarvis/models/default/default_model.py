@@ -31,14 +31,21 @@ for folder in UTILITIES_DIR.iterdir():
 from current_date import get_date
 from current_time import get_time
 from current_weather import get_weather
+from air_quality import get_air_quality
 from dictionary import define
 from finance import convert_currency, get_crypto_price, get_stock_price
 from forecast import get_daily_forecast, get_hourly_forecast
+from media_control import MEDIA_KEYS, get_now_playing, media_control
 from scores import LEAGUES, get_scores
+from sun_moon import get_sun_and_moon
 from system_specifications import get_system_specifications
 from system_status import get_system_status
 
 UTILITY_FUNCTIONS = {
+    "get_air_quality": get_air_quality,
+    "get_sun_and_moon": get_sun_and_moon,
+    "media_control": media_control,
+    "get_now_playing": get_now_playing,
     "get_daily_forecast": get_daily_forecast,
     "get_hourly_forecast": get_hourly_forecast,
     "get_stock_price": get_stock_price,
@@ -63,6 +70,36 @@ _ZIP_CODE = {
 }
 
 UTILITY_TOOLS = [
+    {
+        "name": "get_air_quality",
+        "description": "Get the current air quality (US AQI, pollutants) and UV index. Defaults to the user's configured zip code.",
+        "input_schema": {"type": "object", "properties": _ZIP_CODE},
+    },
+    {
+        "name": "get_sun_and_moon",
+        "description": "Get today's sunrise, sunset, and daylight hours, plus the current moon phase. Defaults to the user's configured zip code.",
+        "input_schema": {"type": "object", "properties": _ZIP_CODE},
+    },
+    {
+        "name": "media_control",
+        "description": "Control media playback and system volume on the user's computer: play/pause, next or previous track, stop, volume up/down, or mute.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "action": {"type": "string", "enum": list(MEDIA_KEYS)},
+                "times": {
+                    "type": "integer",
+                    "description": "For volume_up/volume_down only: key presses, each about 2% volume. Defaults to 1.",
+                },
+            },
+            "required": ["action"],
+        },
+    },
+    {
+        "name": "get_now_playing",
+        "description": "Get the title, artist, album, source app, and playback status of the media currently playing on the user's computer.",
+        "input_schema": _NO_INPUT,
+    },
     {
         "name": "get_daily_forecast",
         "description": "Get the multi-day weather forecast (high/low, conditions, rain chance, wind, sunrise, sunset). Defaults to the user's configured zip code.",
@@ -251,7 +288,6 @@ def _create_message(messages):
             "type": "web_fetch_20260318",
             "allowed_callers": ["direct"],
         },
-        {"type": "bash_20250124", "name": "bash"},
         {
             "type": "browser_toolset_20260801",
             "configs": {
@@ -272,4 +308,4 @@ def _create_message(messages):
 
 
 if __name__ == "__main__":
-    print(send_message("What GPU do I have, and what is the weather for me?", "demo"))
+    print(send_message("What GPU do I have, and what is the weather for me, moon phase, and sunrise (sunrise tommorow)?", "demo"))
