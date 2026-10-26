@@ -11,11 +11,12 @@ ROOT_DIR = MODELS_DIR.parents[1]
 CONVERSATIONS_DIR = MODELS_DIR / "conversations"
 CONVERSATIONS_DIR.mkdir(exist_ok=True)
 
-# Get API key
+# Get API key and model version
 config = ConfigParser()
 config.read(ROOT_DIR / "config.conf")
 anthropic_api_key = config["anthropic"]["anthropic_api_key"]
 client = anthropic.Anthropic(api_key=anthropic_api_key)
+model_version = config["anthropic"]["model"]
 
 # Get training data
 with open(MODELS_DIR / "training_data" / "jarvis.txt", "r", encoding="utf-8") as file:
@@ -278,7 +279,7 @@ def send_message(user_input, conversation_id="default"):
 
 def _create_message(messages):
     return client.messages.create(
-        model="claude-sonnet-5-5",
+        model=model_version,
         max_tokens=1024,
         system=content,
         messages=messages,
