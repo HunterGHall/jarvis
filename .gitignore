@@ -1,2 +1,4 @@
 config.conf
 __pycache__/
+/to-do.txt
+jarvis/models/conversations/
