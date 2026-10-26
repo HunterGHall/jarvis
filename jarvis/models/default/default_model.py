@@ -37,6 +37,11 @@ model_version = config["anthropic"].get("model", "claude-sonnet-5-5")
 with open(MODELS_DIR / "training_data" / "jarvis.txt", "r", encoding="utf-8") as file:
     content = file.read()
 
+# Tell the model who it is talking to
+user_name = config.get("personal", "name", fallback="").strip().strip('"')
+if user_name:
+    content += f"\n\nThe user's name is {user_name}, address them as there name when needed, and if natural."
+
 # Utilities import each other by bare module name (e.g. `from location import ...`),
 # so each utility folder has to be on the path
 UTILITIES_DIR = MODELS_DIR / "utilities"
