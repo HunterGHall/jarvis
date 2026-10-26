@@ -17,7 +17,7 @@ if not CONFIG_PATH.exists():
     CONFIG_PATH.write_text(
         "[anthropic]\n"
         "anthropic_api_key = YOUR_KEY\n"
-        "model = claude-sonnet-5-5\n"
+        "model = claude-haiku-5-5\n"
         "\n"
         "[personal]\n"
         "name = YOUR_NAME\n"
