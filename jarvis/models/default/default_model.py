@@ -53,16 +53,30 @@ from current_date import get_date
 from current_time import get_time
 from current_weather import get_weather
 from air_quality import get_air_quality
+from app_launcher import open_app
+from clipboard import read_clipboard, write_clipboard
 from dictionary import define
+from file_search import FOLDERS, search_files
 from finance import convert_currency, get_crypto_price, get_stock_price
 from forecast import get_daily_forecast, get_hourly_forecast
 from media_control import MEDIA_KEYS, get_now_playing, media_control
+from network_status import get_network_status, ping_host
 from scores import LEAGUES, get_scores
 from sun_moon import get_sun_and_moon
 from system_specifications import get_system_specifications
 from system_status import get_system_status
+from timer import cancel_timer, list_timers, set_timer
 
 UTILITY_FUNCTIONS = {
+    "open_app": open_app,
+    "set_timer": set_timer,
+    "list_timers": list_timers,
+    "cancel_timer": cancel_timer,
+    "read_clipboard": read_clipboard,
+    "write_clipboard": write_clipboard,
+    "search_files": search_files,
+    "get_network_status": get_network_status,
+    "ping_host": ping_host,
     "get_air_quality": get_air_quality,
     "get_sun_and_moon": get_sun_and_moon,
     "media_control": media_control,
@@ -91,6 +105,89 @@ _ZIP_CODE = {
 }
 
 UTILITY_TOOLS = [
+    {
+        "name": "open_app",
+        "description": "Open an application, a website, or one of the user's main folders (Desktop, Documents, Downloads, Pictures, Music, Videos) on their computer.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "name": {"type": "string", "description": "App name (e.g. Spotify, calculator), a folder name, or an http(s) URL."}
+            },
+            "required": ["name"],
+        },
+    },
+    {
+        "name": "set_timer",
+        "description": "Start a countdown timer that alerts the user in the terminal when it finishes. Convert the requested time to seconds.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "seconds": {"type": "number", "description": "Duration in seconds."},
+                "label": {"type": "string", "description": "Optional name for the timer, e.g. 'pasta'."},
+            },
+            "required": ["seconds"],
+        },
+    },
+    {
+        "name": "list_timers",
+        "description": "List the active timers and how much time each has left.",
+        "input_schema": _NO_INPUT,
+    },
+    {
+        "name": "cancel_timer",
+        "description": "Cancel an active timer by id or label.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "timer_id": {"type": "integer"},
+                "label": {"type": "string"},
+            },
+        },
+    },
+    {
+        "name": "read_clipboard",
+        "description": "Read the text currently on the user's clipboard.",
+        "input_schema": _NO_INPUT,
+    },
+    {
+        "name": "write_clipboard",
+        "description": "Copy text to the user's clipboard, replacing what's there.",
+        "input_schema": {
+            "type": "object",
+            "properties": {"text": {"type": "string"}},
+            "required": ["text"],
+        },
+    },
+    {
+        "name": "search_files",
+        "description": "Search the user's main folders (Desktop, Documents, Downloads, Pictures, Music, Videos) for files by name and/or extension, newest first. With no query it lists the most recently modified files.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "query": {"type": "string", "description": "Text to match in the file name."},
+                "folder": {"type": "string", "enum": FOLDERS, "description": "Limit the search to one folder."},
+                "extension": {"type": "string", "description": "File extension, e.g. pdf."},
+                "limit": {"type": "integer", "description": "Max results, up to 50. Defaults to 20."},
+            },
+        },
+    },
+    {
+        "name": "get_network_status",
+        "description": "Get the computer's network status: connectivity, latency, local and public IP, hostname, and Wi-Fi network and signal.",
+        "input_schema": _NO_INPUT,
+    },
+    {
+        "name": "ping_host",
+        "description": "Ping a hostname or IP address and report reachability and latency.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "host": {"type": "string", "description": "Hostname or IP, e.g. google.com."},
+                "count": {"type": "integer", "description": "Number of pings, up to 10. Defaults to 4."},
+            },
+            "required": ["host"],
+        },
+    },
     {
         "name": "get_air_quality",
         "description": "Get the current air quality (US AQI, pollutants) and UV index. Defaults to the user's configured zip code.",
