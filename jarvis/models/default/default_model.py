@@ -262,15 +262,15 @@ def send_message(user_input, conversation_id="default"):
     history = load_history(conversation_id)
     history.append({"role": "user", "content": user_input})
 
-    # Tool turns stay local; only the final text reply is saved to history
-    messages = list(history)
+    # Tool turns are kept in history so later turns can see what was actually looked up
+    messages = history
 
     while True:
         message = _create_message(messages)
+        messages.append({"role": "assistant", "content": _dump_content(message)})
         if message.stop_reason != "tool_use":
             break
 
-        messages.append({"role": "assistant", "content": message.content})
         results = []
         for block in message.content:
             if block.type != "tool_use":
@@ -286,10 +286,13 @@ def send_message(user_input, conversation_id="default"):
             )
         messages.append({"role": "user", "content": results})
 
-    reply = "".join(block.text for block in message.content if block.type == "text")
-    history.append({"role": "assistant", "content": reply})
     save_history(conversation_id, history)
-    return reply
+    return "".join(block.text for block in message.content if block.type == "text")
+
+
+def _dump_content(message):
+    # Plain dicts, so the blocks can be saved as JSON and sent back to the API
+    return [block.model_dump(exclude_none=True) for block in message.content]
 
 
 def _create_message(messages):
