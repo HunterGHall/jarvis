@@ -14,11 +14,12 @@ A command-line AI assistant powered by Claude, with built-in utilities for every
 ## Setup
 
 1. Install Python 3 and the dependencies (`anthropic`, etc.).
-2. Add your details to `config.conf`:
+2. Run it once to generate `config.conf` (or create it yourself), then add your details:
 
    ```ini
    [anthropic]
    anthropic_api_key = YOUR_KEY
+   model = claude-sonnet-5-5
 
    [personal]
    name = YOUR_NAME

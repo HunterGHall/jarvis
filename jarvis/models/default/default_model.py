@@ -11,12 +11,27 @@ ROOT_DIR = MODELS_DIR.parents[1]
 CONVERSATIONS_DIR = MODELS_DIR / "conversations"
 CONVERSATIONS_DIR.mkdir(exist_ok=True)
 
+# Create a config template on first run, since the real one is gitignored
+CONFIG_PATH = ROOT_DIR / "config.conf"
+if not CONFIG_PATH.exists():
+    CONFIG_PATH.write_text(
+        "[anthropic]\n"
+        "anthropic_api_key = YOUR_KEY\n"
+        "model = claude-sonnet-5-5\n"
+        "\n"
+        "[personal]\n"
+        "name = YOUR_NAME\n"
+        "zip_code = YOUR_ZIP\n",
+        encoding="utf-8",
+    )
+    sys.exit(f"Created {CONFIG_PATH}. Fill in your details and run again.")
+
 # Get API key and model version
 config = ConfigParser()
-config.read(ROOT_DIR / "config.conf")
+config.read(CONFIG_PATH)
 anthropic_api_key = config["anthropic"]["anthropic_api_key"]
 client = anthropic.Anthropic(api_key=anthropic_api_key)
-model_version = config["anthropic"]["model"]
+model_version = config["anthropic"].get("model", "claude-sonnet-5-5")
 
 # Get training data
 with open(MODELS_DIR / "training_data" / "jarvis.txt", "r", encoding="utf-8") as file:
