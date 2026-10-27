@@ -53,14 +53,17 @@ from current_date import get_date
 from current_time import get_time
 from current_weather import get_weather
 from air_quality import get_air_quality
-from app_launcher import open_app
+from app_launcher import close_app, open_app
+from calculator import calculate, convert_units
 from clipboard import read_clipboard, write_clipboard
 from dictionary import define
 from file_search import FOLDERS, search_files
 from finance import convert_currency, get_crypto_price, get_stock_price
+from focus_mode import get_do_not_disturb, set_do_not_disturb
 from forecast import get_daily_forecast, get_hourly_forecast
 from media_control import MEDIA_KEYS, get_now_playing, media_control
 from network_status import get_network_status, ping_host
+from randomizer import flip_coin, pick_random, random_number, roll_dice
 from scores import LEAGUES, get_scores
 from sun_moon import get_sun_and_moon
 from system_specifications import get_system_specifications
@@ -68,6 +71,15 @@ from system_status import get_system_status
 from timer import cancel_timer, list_timers, set_timer
 
 UTILITY_FUNCTIONS = {
+    "calculate": calculate,
+    "convert_units": convert_units,
+    "roll_dice": roll_dice,
+    "flip_coin": flip_coin,
+    "random_number": random_number,
+    "pick_random": pick_random,
+    "get_do_not_disturb": get_do_not_disturb,
+    "set_do_not_disturb": set_do_not_disturb,
+    "close_app": close_app,
     "open_app": open_app,
     "set_timer": set_timer,
     "list_timers": list_timers,
@@ -105,6 +117,87 @@ _ZIP_CODE = {
 }
 
 UTILITY_TOOLS = [
+    {
+        "name": "calculate",
+        "description": "Evaluate a math expression exactly. Supports + - * / // ** ^, parentheses, pi, e, and sqrt, sin, cos, tan, log (base 10), ln, abs, round, floor, ceil, factorial, min, max. Convert percentages first, e.g. '15% of 80' becomes '0.15 * 80'.",
+        "input_schema": {
+            "type": "object",
+            "properties": {"expression": {"type": "string"}},
+            "required": ["expression"],
+        },
+    },
+    {
+        "name": "convert_units",
+        "description": "Convert a value between units of length, mass, volume, area, speed, data size, time, or temperature (c, f, k).",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "value": {"type": "number"},
+                "from_unit": {"type": "string", "description": "e.g. miles, kg, fahrenheit, mph, GB."},
+                "to_unit": {"type": "string"},
+            },
+            "required": ["value", "from_unit", "to_unit"],
+        },
+    },
+    {
+        "name": "roll_dice",
+        "description": "Roll one or more dice, e.g. 2d20 for a D&D attack.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "sides": {"type": "integer", "description": "Sides per die. Defaults to 6."},
+                "count": {"type": "integer", "description": "Number of dice, up to 100. Defaults to 1."},
+            },
+        },
+    },
+    {
+        "name": "flip_coin",
+        "description": "Flip a coin: heads or tails.",
+        "input_schema": _NO_INPUT,
+    },
+    {
+        "name": "random_number",
+        "description": "Pick a random whole number between a minimum and maximum, inclusive.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "minimum": {"type": "integer", "description": "Defaults to 1."},
+                "maximum": {"type": "integer", "description": "Defaults to 100."},
+            },
+        },
+    },
+    {
+        "name": "pick_random",
+        "description": "Pick one item at random from a list of options, e.g. to decide where to eat.",
+        "input_schema": {
+            "type": "object",
+            "properties": {"options": {"type": "array", "items": {"type": "string"}}},
+            "required": ["options"],
+        },
+    },
+    {
+        "name": "get_do_not_disturb",
+        "description": "Check whether Windows Do Not Disturb (focus mode) is on.",
+        "input_schema": _NO_INPUT,
+    },
+    {
+        "name": "set_do_not_disturb",
+        "description": "Turn Windows Do Not Disturb on or off. While on, notification banners are silenced.",
+        "input_schema": {
+            "type": "object",
+            "properties": {"enabled": {"type": "boolean"}},
+            "required": ["enabled"],
+        },
+    },
+    {
+        "name": "close_app",
+        "description": "Close an open app the way the X button does, so apps with unsaved work will still prompt. Only close what the user explicitly asked for. The terminal Jarvis runs in and the desktop shell are protected.",
+        "input_schema": {
+            "type": "object",
+            "properties": {"name": {"type": "string", "description": "App name, e.g. Spotify, Chrome, Notepad."}},
+            "required": ["name"],
+        },
+    },
     {
         "name": "open_app",
         "description": "Open an application, a website, or one of the user's main folders (Desktop, Documents, Downloads, Pictures, Music, Videos) on their computer.",
@@ -423,6 +516,7 @@ def _create_message(messages):
             "type": "web_search_20260318",
             "allowed_callers": ["direct"],
         },
+        {"type": "computer_toolset_20260801"},
         ],
         output_config={"effort": "medium"},
     )
