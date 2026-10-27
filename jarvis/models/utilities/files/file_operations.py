@@ -94,6 +94,18 @@ def _run(operation, *args):
         return {"error": f"{type(error).__name__}: {error}"}
 
 
+def _recycle(targets):
+    """Send paths to the Recycle Bin. Callers are responsible for getting the user's approval first."""
+    request = _FileOperation()
+    request.wFunc = FO_DELETE
+    # The path list is null-separated and ends with two nulls; Python adds the last one itself.
+    request.pFrom = "\0".join(str(target) for target in targets) + "\0"
+    request.fFlags = FOF_ALLOWUNDO | FOF_NOCONFIRMATION | FOF_NOERRORUI | FOF_SILENT
+    result = ctypes.windll.shell32.SHFileOperationW(ctypes.byref(request))
+    if result != 0 or request.fAnyOperationsAborted:
+        raise _OperationError(f"Windows couldn't delete everything (code {result}). Some items may remain.")
+
+
 def delete_file(paths, contents_only=False):
     """Send files or folders to the Recycle Bin after the user approves. One approval covers the whole batch."""
 
@@ -125,14 +137,7 @@ def delete_file(paths, contents_only=False):
         if CONFIRM is None or not CONFIRM(message):
             return {"deleted": False, "reason": "The user declined, or confirmation wasn't available."}
 
-        request = _FileOperation()
-        request.wFunc = FO_DELETE
-        # The path list is null-separated and ends with two nulls; Python adds the last one itself.
-        request.pFrom = "\0".join(str(target) for target in targets) + "\0"
-        request.fFlags = FOF_ALLOWUNDO | FOF_NOCONFIRMATION | FOF_NOERRORUI | FOF_SILENT
-        result = ctypes.windll.shell32.SHFileOperationW(ctypes.byref(request))
-        if result != 0 or request.fAnyOperationsAborted:
-            raise _OperationError(f"Windows couldn't delete everything (code {result}). Some items may remain.")
+        _recycle(targets)
         return {
             "deleted": True,
             "count": len(targets),
