@@ -1,6 +1,7 @@
 import json
 import os
 import re
+import subprocess
 import webbrowser
 from pathlib import Path
 
@@ -75,6 +76,58 @@ def open_app(name):
     except OSError:
         return {"error": f"Couldn't find an app called '{name}'."}
     return {"opened": name, "type": "app"}
+
+
+# Names people say that differ from the process name.
+PROCESS_ALIASES = {
+    "google chrome": "chrome",
+    "edge": "msedge",
+    "microsoft edge": "msedge",
+    "vs code": "code",
+    "visual studio code": "code",
+    "word": "winword",
+    "excel": "excel",
+    "powerpoint": "powerpnt",
+}
+
+# Never closed, so Jarvis can't shut down the terminal it's running in or the desktop shell.
+PROTECTED_PROCESSES = {
+    "explorer", "python", "pythonw", "windowsterminal", "cmd", "powershell", "pwsh", "conhost", "openconsole",
+}
+
+
+def close_app(name):
+    key = name.strip().lower()
+    query = PROCESS_ALIASES.get(key, key).replace(" ", "")
+    # Match on the process name only. A window title can match unrelated apps, e.g. a browser tab.
+    script = (
+        "Get-Process | Where-Object { $_.MainWindowHandle -ne 0 } | "
+        "Select-Object Id,ProcessName | ConvertTo-Json -Compress"
+    )
+    try:
+        result = subprocess.run(
+            ["powershell", "-NoProfile", "-Command", script], capture_output=True, text=True, timeout=15
+        )
+        processes = json.loads(result.stdout or "[]")
+    except (OSError, subprocess.SubprocessError, ValueError):
+        return {"error": "Couldn't list running apps."}
+    if isinstance(processes, dict):
+        processes = [processes]
+
+    matches = [p for p in processes if query in p["ProcessName"].lower()]
+    if any(p["ProcessName"].lower() in PROTECTED_PROCESSES for p in matches):
+        return {"error": f"'{name}' is protected and won't be closed."}
+    if not matches:
+        return {"error": f"No open app matching '{name}'."}
+
+    # CloseMainWindow asks the app to close like the X button does, so unsaved work still prompts.
+    ids = ",".join(str(p["Id"]) for p in matches)
+    subprocess.run(
+        ["powershell", "-NoProfile", "-Command", f"Get-Process -Id {ids} | ForEach-Object {{ [void]$_.CloseMainWindow() }}"],
+        capture_output=True,
+        timeout=15,
+    )
+    return {"closed": sorted({p["ProcessName"] for p in matches}), "windows": len(matches)}
 
 
 if __name__ == "__main__":
