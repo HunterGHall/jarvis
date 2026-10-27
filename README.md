@@ -12,6 +12,7 @@ Jarvis can call these tools on its own whenever a question needs them, and the C
 - Stocks, crypto, and currency conversion
 - Live sports scores (NFL, NBA, WNBA, MLB, NHL, MLS, Premier League, college football and basketball)
 - News headlines by topic (including local news for your zip code) and news search, with the other outlets covering each story
+- Public holidays, upcoming or by year, for any country
 - Dictionary definitions, synonyms, and antonyms
 - Recipes by dish or ingredient, plus a random recipe
 
@@ -25,6 +26,8 @@ Jarvis can call these tools on its own whenever a question needs them, and the C
 - Find files in your main folders by name or extension
 - Move, copy, rename, create, and delete files and folders
 - Check the Recycle Bin and permanently empty it
+- Read files (text, code, CSV/JSON, Word `.docx`, and PDF) and write text files
+- Set the speaker volume to an exact percentage, or mute it
 
 **Tools**
 - Calculator and unit conversion
@@ -37,6 +40,7 @@ Jarvis can search, move, copy, rename, and delete files anywhere on your compute
 
 - Deleting always asks for your approval (`y/N`) first. The prompt lists how many items, how big, and which ones. One approval covers a whole batch, and a folder can be emptied in one go. Everything goes to the Recycle Bin so it can be restored.
 - Emptying the Recycle Bin is permanent, so it asks first too, showing the item count and size.
+- Writing a file never replaces an existing one by default. Overwriting asks first and sends the old version to the Recycle Bin. Nothing is written inside `C:\Windows` or `Program Files`.
 - Moves, copies, and renames never overwrite an existing file.
 - Whole drives, `C:\Windows`, `Program Files`, and your user folder itself are never deleted, moved, or renamed.
 - A file search with no folder covers your main folders (Desktop, Documents, Downloads, Pictures, Music, Videos). Name any other folder or a whole drive to search there.
