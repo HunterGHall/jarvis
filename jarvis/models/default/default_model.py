@@ -62,13 +62,16 @@ from app_launcher import close_app, open_app
 from calculator import calculate, convert_units
 from clipboard import read_clipboard, write_clipboard
 from dictionary import define
+from file_io import read_file, write_file
 from file_operations import copy_file, create_folder, delete_file, move_file, rename_file
+from holidays import get_holidays
 from file_search import search_files
 from recycle_bin import empty_recycle_bin, get_recycle_bin
 from finance import convert_currency, get_crypto_price, get_stock_price
 from focus_mode import get_do_not_disturb, set_do_not_disturb
 from forecast import get_daily_forecast, get_hourly_forecast
 from media_control import MEDIA_KEYS, get_now_playing, media_control
+from volume import get_volume, set_volume
 from network_status import get_network_status, ping_host
 from news import TOPICS as NEWS_TOPICS, get_headlines, search_news
 from randomizer import flip_coin, pick_random, random_number, roll_dice
@@ -80,6 +83,11 @@ from system_status import get_system_status
 from timer import cancel_timer, list_timers, set_timer
 
 UTILITY_FUNCTIONS = {
+    "get_holidays": get_holidays,
+    "get_volume": get_volume,
+    "set_volume": set_volume,
+    "read_file": read_file,
+    "write_file": write_file,
     "get_recycle_bin": get_recycle_bin,
     "empty_recycle_bin": empty_recycle_bin,
     "search_recipes": search_recipes,
@@ -143,6 +151,60 @@ _FILE_PATH = (
 )
 
 UTILITY_TOOLS = [
+    {
+        "name": "get_holidays",
+        "description": "Get public holidays: the upcoming ones by default (with days until each), or every holiday in a given year. Defaults to the US; use a two-letter country code for others.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "country": {"type": "string", "description": "Two-letter country code, e.g. US, GB, CA. Defaults to US."},
+                "year": {"type": "integer", "description": "List the whole year instead of just upcoming holidays."},
+                "limit": {"type": "integer", "description": "How many upcoming holidays, up to 30. Defaults to 10."},
+            },
+        },
+    },
+    {
+        "name": "get_volume",
+        "description": "Get the computer's current speaker volume (0-100) and whether it's muted.",
+        "input_schema": _NO_INPUT,
+    },
+    {
+        "name": "set_volume",
+        "description": "Set the computer's speaker volume to an exact percentage (0-100) and/or mute or unmute it. Use media_control instead for small up/down steps.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "level": {"type": "integer", "description": "Volume from 0 to 100."},
+                "muted": {"type": "boolean", "description": "true to mute, false to unmute."},
+            },
+        },
+    },
+    {
+        "name": "read_file",
+        "description": "Read the contents of a text, code, CSV/JSON, .docx, or .pdf file anywhere on the computer. Long files come back in pages: use the offset from the truncated note to continue.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "path": {"type": "string", "description": _FILE_PATH},
+                "offset": {"type": "integer", "description": "Character to start from. Defaults to 0."},
+                "max_chars": {"type": "integer", "description": "Characters to return, up to 100000. Defaults to 20000."},
+            },
+            "required": ["path"],
+        },
+    },
+    {
+        "name": "write_file",
+        "description": "Write text to a file. mode 'create' (default) makes a new file and refuses if it exists; 'append' adds to the end; 'overwrite' replaces it, after the user approves in the CLI, with the old version kept in the Recycle Bin. Parent folders are created as needed. Text only.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "path": {"type": "string", "description": _FILE_PATH},
+                "content": {"type": "string"},
+                "mode": {"type": "string", "enum": ["create", "append", "overwrite"]},
+            },
+            "required": ["path", "content"],
+        },
+    },
     {
         "name": "get_recycle_bin",
         "description": "Check how many items are in the Recycle Bin and how much space they take.",
