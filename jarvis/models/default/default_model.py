@@ -2,6 +2,7 @@ import anthropic
 import json
 import re
 import sys
+import time
 from configparser import ConfigParser
 from pathlib import Path
 
@@ -453,7 +454,31 @@ def _run_utility(name, tool_input):
         return f"{type(error).__name__}: {error}", True
 
 
-def send_message(user_input, conversation_id="default"):
+def _emit_server_tools(message, emit):
+    # Server-side tools (web search/fetch) run inside the API call, so they're reported afterwards
+    for block in message.content:
+        if block.type == "server_tool_use":
+            emit({"type": "tool_call", "name": block.name, "input": block.input, "server": True})
+        elif block.type.endswith("_tool_result"):
+            result = getattr(block, "content", None)
+            if isinstance(result, list):
+                summary, is_error = f"{len(result)} result{'s' if len(result) != 1 else ''}", False
+            else:
+                error_type = str(getattr(result, "type", "") or getattr(result, "error_code", ""))
+                summary, is_error = error_type or "done", "error" in error_type
+            emit(
+                {
+                    "type": "tool_result",
+                    "name": block.type.removesuffix("_tool_result"),
+                    "output": summary,
+                    "is_error": is_error,
+                }
+            )
+
+
+def send_message(user_input, conversation_id="default", on_event=None):
+    # on_event gets a dict per tool call/result so a front end can show what the model is doing
+    emit = on_event or (lambda _: None)
     history = load_history(conversation_id)
     history.append({"role": "user", "content": user_input})
 
@@ -463,6 +488,7 @@ def send_message(user_input, conversation_id="default"):
     while True:
         message = _create_message(messages)
         messages.append({"role": "assistant", "content": _dump_content(message)})
+        _emit_server_tools(message, emit)
         if message.stop_reason != "tool_use":
             break
 
@@ -470,7 +496,18 @@ def send_message(user_input, conversation_id="default"):
         for block in message.content:
             if block.type != "tool_use":
                 continue
+            emit({"type": "tool_call", "name": block.name, "input": block.input})
+            started = time.perf_counter()
             output, is_error = _run_utility(block.name, block.input)
+            emit(
+                {
+                    "type": "tool_result",
+                    "name": block.name,
+                    "output": output,
+                    "is_error": is_error,
+                    "seconds": time.perf_counter() - started,
+                }
+            )
             results.append(
                 {
                     "type": "tool_result",
