@@ -63,7 +63,7 @@ from calculator import calculate, convert_units
 from clipboard import read_clipboard, write_clipboard
 from dictionary import define
 from file_operations import copy_file, create_folder, delete_file, move_file, rename_file
-from file_search import FOLDERS, search_files
+from file_search import search_files
 from finance import convert_currency, get_crypto_price, get_stock_price
 from focus_mode import get_do_not_disturb, set_do_not_disturb
 from forecast import get_daily_forecast, get_hourly_forecast
@@ -135,8 +135,8 @@ _ZIP_CODE = {
 }
 
 _FILE_PATH = (
-    "Full path, or a path starting with Desktop, Documents, Downloads, Pictures, Music or Videos "
-    "(e.g. Downloads/report.pdf). Only files inside those folders can be changed."
+    "Full path to anywhere on this computer, or a shortcut starting with Desktop, Documents, "
+    "Downloads, Pictures, Music or Videos (e.g. Downloads/report.pdf)."
 )
 
 UTILITY_TOOLS = [
@@ -170,11 +170,17 @@ UTILITY_TOOLS = [
     },
     {
         "name": "delete_file",
-        "description": "Move a file or folder to the Recycle Bin (it can be restored). The user is asked to approve every delete, so never claim something is deleted until this returns deleted: true. Find the file with search_files first if needed.",
+        "description": "Move files or folders to the Recycle Bin (they can be restored). The CLI itself asks the user to approve each delete with a y/N prompt that lists what will go, so when the user has clearly asked for a delete, call this right away: don't ask for confirmation in chat first, and don't comment on file names. Pass many paths in one call for a single approval. To empty a folder, pass the folder with contents_only=true instead of listing its files. Never claim something is deleted until this returns deleted: true.",
         "input_schema": {
             "type": "object",
-            "properties": {"path": {"type": "string", "description": _FILE_PATH}},
-            "required": ["path"],
+            "properties": {
+                "paths": {"type": "array", "items": {"type": "string", "description": _FILE_PATH}},
+                "contents_only": {
+                    "type": "boolean",
+                    "description": "Delete everything inside each given folder but keep the folder itself.",
+                },
+            },
+            "required": ["paths"],
         },
     },
     {
@@ -383,14 +389,14 @@ UTILITY_TOOLS = [
     },
     {
         "name": "search_files",
-        "description": "Search the user's main folders (Desktop, Documents, Downloads, Pictures, Music, Videos) for files by name and/or extension, newest first. With no query it lists the most recently modified files.",
+        "description": "Search for files by name and/or extension, newest first. With no folder it searches the user's main folders (Desktop, Documents, Downloads, Pictures, Music, Videos); give a folder name or any full path, even a whole drive like C:\\, to search anywhere. With no query it lists the most recently modified files. Compare total_matches with returned and raise limit if results were cut off. Lists files only, not empty folders.",
         "input_schema": {
             "type": "object",
             "properties": {
                 "query": {"type": "string", "description": "Text to match in the file name."},
-                "folder": {"type": "string", "enum": FOLDERS, "description": "Limit the search to one folder."},
+                "folder": {"type": "string", "description": "A main folder name (e.g. Downloads) or any full folder path."},
                 "extension": {"type": "string", "description": "File extension, e.g. pdf."},
-                "limit": {"type": "integer", "description": "Max results, up to 50. Defaults to 20."},
+                "limit": {"type": "integer", "description": "Max results, up to 500. Defaults to 20."},
             },
         },
     },
@@ -649,6 +655,8 @@ def send_message(user_input, conversation_id="default", on_event=None):
         messages.append({"role": "user", "content": results})
 
     save_history(conversation_id, history)
+    details = getattr(message, "stop_details", None)
+    emit({"type": "stop", "stop_reason": message.stop_reason, "details": details.model_dump() if details else None})
     return "".join(block.text for block in message.content if block.type == "text")
 
 
@@ -660,7 +668,7 @@ def _dump_content(message):
 def _create_message(messages):
     return client.messages.create(
         model=model_version,
-        max_tokens=1024,
+        max_tokens=4096,
         system=content,
         messages=messages,
         tools=UTILITY_TOOLS + [

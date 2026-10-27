@@ -32,11 +32,12 @@ Jarvis can call these tools on its own whenever a question needs them, and the C
 
 ### File safety
 
-File changes are limited to Desktop, Documents, Downloads, Pictures, Music, and Videos.
+Jarvis can search, move, copy, rename, and delete files anywhere on your computer.
 
-- Deleting always asks for your approval (`y/N`) first, and sends the item to the Recycle Bin so it can be restored.
+- Deleting always asks for your approval (`y/N`) first. The prompt lists how many items, how big, and which ones. One approval covers a whole batch, and a folder can be emptied in one go. Everything goes to the Recycle Bin so it can be restored.
 - Moves, copies, and renames never overwrite an existing file.
-- The main folders themselves can't be moved, renamed, or deleted.
+- Whole drives, `C:\Windows`, `Program Files`, and your user folder itself are never deleted, moved, or renamed.
+- A file search with no folder covers your main folders (Desktop, Documents, Downloads, Pictures, Music, Videos). Name any other folder or a whole drive to search there.
 - `close_app` closes windows the way the X button does, so unsaved work still prompts. It never closes the terminal Jarvis runs in.
 
 ## Setup

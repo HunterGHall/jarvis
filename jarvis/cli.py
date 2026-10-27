@@ -148,6 +148,7 @@ class _Session:
         self.status = status
         self.calls = 0
         self.started = {}
+        self.stop = None
         self.tokens_in = 0
         self.tokens_out = 0
         self.searches = 0
@@ -186,6 +187,9 @@ class _Session:
     def handle(self, event):
         if event["type"] == "usage":
             self._add_usage(event)
+            return
+        if event["type"] == "stop":
+            self.stop = event
             return
         name = event["name"]
         icon, color = TOOL_STYLES.get(name, DEFAULT_TOOL_STYLE)
@@ -231,9 +235,20 @@ def _ask(message):
     elapsed = time.perf_counter() - started
 
     calls = f"{session.calls} tool call{'s' if session.calls != 1 else ''}" if session.calls else "no tools"
+    if not reply.strip():
+        reason = session.stop["stop_reason"] if session.stop else "unknown"
+        details = (session.stop or {}).get("details") or {}
+        explanation = details.get("explanation") or details.get("category") or ""
+        if reason == "max_tokens":
+            hint = "The reply was cut off before it finished."
+        elif reason == "refusal":
+            hint = "Claude declined this request."
+        else:
+            hint = "Claude finished without saying anything."
+        reply = f"*(no response)*\n\n{hint} Stop reason: `{reason}`" + (f" ({explanation})" if explanation else "") + ". Try asking again."
     console.print(
         Panel(
-            Markdown(reply.strip() or "*(no response)*"),
+            Markdown(reply),
             title="[bold cyan]JARVIS[/]",
             title_align="left",
             subtitle=Text(f"{elapsed:.1f}s · {calls}", style="dim"),
