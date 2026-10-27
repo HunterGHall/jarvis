@@ -22,7 +22,10 @@ if not CONFIG_PATH.exists():
         "\n"
         "[personal]\n"
         "name = YOUR_NAME\n"
-        "zip_code = YOUR_ZIP\n",
+        "zip_code = YOUR_ZIP\n"
+        "\n"
+        "[settings]\n"
+        "show_cost = False\n",
         encoding="utf-8",
     )
     sys.exit(f"Created {CONFIG_PATH}. Fill in your details and run again.")
@@ -33,6 +36,7 @@ config.read(CONFIG_PATH)
 anthropic_api_key = config["anthropic"]["anthropic_api_key"]
 client = anthropic.Anthropic(api_key=anthropic_api_key)
 model_version = config["anthropic"].get("model", "claude-sonnet-5-5")
+show_cost = config.get("settings", "show_cost", fallback="").strip().strip('"').lower() in {"true", "yes", "on", "1"}
 
 # Get training data
 with open(MODELS_DIR / "training_data" / "jarvis.txt", "r", encoding="utf-8") as file:
@@ -487,6 +491,7 @@ def send_message(user_input, conversation_id="default", on_event=None):
 
     while True:
         message = _create_message(messages)
+        emit({"type": "usage", "model": model_version, "usage": message.usage.model_dump()})
         messages.append({"role": "assistant", "content": _dump_content(message)})
         _emit_server_tools(message, emit)
         if message.stop_reason != "tool_use":

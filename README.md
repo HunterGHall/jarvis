@@ -24,7 +24,12 @@ A command-line AI assistant powered by Claude, with built-in utilities for every
    [personal]
    name = YOUR_NAME
    zip_code = YOUR_ZIP
+
+   [settings]
+   show_cost = False
    ```
+
+   Set `show_cost = True` to show the token usage and cost of each reply.
 
 3. Run it:
 

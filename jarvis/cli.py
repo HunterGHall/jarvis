@@ -8,7 +8,8 @@ from rich.markdown import Markdown
 from rich.panel import Panel
 from rich.text import Text
 
-from jarvis.models.default.default_model import UTILITY_TOOLS, model_version, send_message, user_name
+from jarvis.models.default.default_model import UTILITY_TOOLS, model_version, send_message, show_cost, user_name
+from jarvis.pricing import estimate_cost, format_cost, format_tokens
 
 console = Console()
 
@@ -116,8 +117,45 @@ class _Session:
         self.status = status
         self.calls = 0
         self.started = {}
+        self.tokens_in = 0
+        self.tokens_out = 0
+        self.searches = 0
+        # None once any call is on a model without known prices.
+        self.cost_in = 0.0
+        self.cost_out = 0.0
+
+    def _add_usage(self, event):
+        usage = event["usage"]
+        self.tokens_in += sum(
+            usage.get(key) or 0 for key in ("input_tokens", "cache_creation_input_tokens", "cache_read_input_tokens")
+        )
+        self.tokens_out += usage.get("output_tokens") or 0
+        self.searches += (usage.get("server_tool_use") or {}).get("web_search_requests") or 0
+        call_cost = estimate_cost(event["model"], usage)
+        if call_cost is None or self.cost_in is None:
+            self.cost_in = self.cost_out = None
+        else:
+            self.cost_in += call_cost[0]
+            self.cost_out += call_cost[1]
+
+    def cost_summary(self):
+        if self.cost_in is None:
+            parts = [f"{format_tokens(self.tokens_in)} in / {format_tokens(self.tokens_out)} out"]
+        else:
+            parts = [
+                f"{format_tokens(self.tokens_in)} in {format_cost(self.cost_in)}",
+                f"{format_tokens(self.tokens_out)} out {format_cost(self.cost_out)}",
+                f"{format_cost(self.cost_in + self.cost_out)} total",
+            ]
+        if self.searches:
+            # Web searches are billed per search, on top of the token cost.
+            parts.append(f"+{self.searches} web search{'es' if self.searches != 1 else ''}")
+        return " · ".join(parts)
 
     def handle(self, event):
+        if event["type"] == "usage":
+            self._add_usage(event)
+            return
         name = event["name"]
         icon, color = TOOL_STYLES.get(name, DEFAULT_TOOL_STYLE)
         if event["type"] == "tool_call":
@@ -162,12 +200,15 @@ def _ask(message):
             Markdown(reply.strip() or "*(no response)*"),
             title="[bold cyan]JARVIS[/]",
             title_align="left",
-            subtitle=f"[dim]{elapsed:.1f}s · {calls}[/dim]",
+            subtitle=Text(f"{elapsed:.1f}s · {calls}", style="dim"),
             subtitle_align="right",
             border_style="cyan",
             padding=(1, 2),
         )
     )
+    if show_cost:
+        # Its own line, since a panel subtitle gets cut off on a narrow terminal.
+        console.print(Align.right(Text(session.cost_summary(), style="dim yellow")))
 
 
 def run():
