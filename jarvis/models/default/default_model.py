@@ -64,6 +64,7 @@ from clipboard import read_clipboard, write_clipboard
 from dictionary import define
 from file_operations import copy_file, create_folder, delete_file, move_file, rename_file
 from file_search import search_files
+from recycle_bin import empty_recycle_bin, get_recycle_bin
 from finance import convert_currency, get_crypto_price, get_stock_price
 from focus_mode import get_do_not_disturb, set_do_not_disturb
 from forecast import get_daily_forecast, get_hourly_forecast
@@ -79,6 +80,8 @@ from system_status import get_system_status
 from timer import cancel_timer, list_timers, set_timer
 
 UTILITY_FUNCTIONS = {
+    "get_recycle_bin": get_recycle_bin,
+    "empty_recycle_bin": empty_recycle_bin,
     "search_recipes": search_recipes,
     "get_recipe": get_recipe,
     "random_recipe": random_recipe,
@@ -140,6 +143,16 @@ _FILE_PATH = (
 )
 
 UTILITY_TOOLS = [
+    {
+        "name": "get_recycle_bin",
+        "description": "Check how many items are in the Recycle Bin and how much space they take.",
+        "input_schema": _NO_INPUT,
+    },
+    {
+        "name": "empty_recycle_bin",
+        "description": "PERMANENTLY erase everything in the Recycle Bin, which can't be undone (this is how to permanently delete files that delete_file moved there). The CLI asks the user to approve with a y/N prompt showing the item count and size, so when the user has clearly asked to empty or delete the Recycle Bin, call this right away without asking in chat first. Never claim it's emptied until this returns emptied: true.",
+        "input_schema": _NO_INPUT,
+    },
     {
         "name": "search_recipes",
         "description": "Search recipes by dish name or main ingredient, e.g. 'lasagne' or 'chicken'. Returns matching dishes with their category and cuisine.",

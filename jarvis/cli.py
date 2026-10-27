@@ -70,6 +70,8 @@ TOOL_STYLES = {
     "convert_units": ("📐", "bright_cyan"),
     "search_files": ("📂", "bright_yellow"),
     "delete_file": ("🗑 ", "red"),
+    "empty_recycle_bin": ("🔥", "bold red"),
+    "get_recycle_bin": ("🗑 ", "red"),
     "move_file": ("📦", "bright_yellow"),
     "copy_file": ("📄", "bright_yellow"),
     "rename_file": ("✏ ", "bright_yellow"),

@@ -24,6 +24,7 @@ Jarvis can call these tools on its own whenever a question needs them, and the C
 - Windows Do Not Disturb on and off
 - Find files in your main folders by name or extension
 - Move, copy, rename, create, and delete files and folders
+- Check the Recycle Bin and permanently empty it
 
 **Tools**
 - Calculator and unit conversion
@@ -35,6 +36,7 @@ Jarvis can call these tools on its own whenever a question needs them, and the C
 Jarvis can search, move, copy, rename, and delete files anywhere on your computer.
 
 - Deleting always asks for your approval (`y/N`) first. The prompt lists how many items, how big, and which ones. One approval covers a whole batch, and a folder can be emptied in one go. Everything goes to the Recycle Bin so it can be restored.
+- Emptying the Recycle Bin is permanent, so it asks first too, showing the item count and size.
 - Moves, copies, and renames never overwrite an existing file.
 - Whole drives, `C:\Windows`, `Program Files`, and your user folder itself are never deleted, moved, or renamed.
 - A file search with no folder covers your main folders (Desktop, Documents, Downloads, Pictures, Music, Videos). Name any other folder or a whole drive to search there.
