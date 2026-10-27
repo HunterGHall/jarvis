@@ -28,6 +28,8 @@ BANNER_COLORS = ["#00ffff", "#00e5ff", "#00c8ff", "#00a8ff", "#0088ff", "#0066ff
 TOOL_STYLES = {
     "web_search": ("🔍", "yellow"),
     "web_fetch": ("🌐", "yellow"),
+    "get_headlines": ("📰", "bright_white"),
+    "search_news": ("📰", "bright_white"),
     "get_weather": ("🌤 ", "bright_blue"),
     "get_daily_forecast": ("🌤 ", "bright_blue"),
     "get_hourly_forecast": ("🌤 ", "bright_blue"),

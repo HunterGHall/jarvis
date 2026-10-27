@@ -68,6 +68,7 @@ from focus_mode import get_do_not_disturb, set_do_not_disturb
 from forecast import get_daily_forecast, get_hourly_forecast
 from media_control import MEDIA_KEYS, get_now_playing, media_control
 from network_status import get_network_status, ping_host
+from news import TOPICS as NEWS_TOPICS, get_headlines, search_news
 from randomizer import flip_coin, pick_random, random_number, roll_dice
 from scores import LEAGUES, get_scores
 from sun_moon import get_sun_and_moon
@@ -76,6 +77,8 @@ from system_status import get_system_status
 from timer import cancel_timer, list_timers, set_timer
 
 UTILITY_FUNCTIONS = {
+    "get_headlines": get_headlines,
+    "search_news": search_news,
     "calculate": calculate,
     "convert_units": convert_units,
     "roll_dice": roll_dice,
@@ -122,6 +125,31 @@ _ZIP_CODE = {
 }
 
 UTILITY_TOOLS = [
+    {
+        "name": "get_headlines",
+        "description": "Get current news headlines by topic, from many outlets. Each story has its source, how long ago it was published, and the other outlets also covering it (more outlets means a bigger story). Use this for 'what's in the news' questions, before web search. 'local' uses the user's zip code. Links are Google News redirects, so use web search if the user wants an article's full details.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "topic": {"type": "string", "enum": list(NEWS_TOPICS), "description": "Defaults to top."},
+                "limit": {"type": "integer", "description": "Number of stories, up to 20. Defaults to 8."},
+                **_ZIP_CODE,
+            },
+        },
+    },
+    {
+        "name": "search_news",
+        "description": "Search recent news articles about a person, company, event, or subject. Same story format as get_headlines.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "query": {"type": "string"},
+                "days": {"type": "integer", "description": "How many days back to look, up to 30. Defaults to 3."},
+                "limit": {"type": "integer", "description": "Number of stories, up to 20. Defaults to 8."},
+            },
+            "required": ["query"],
+        },
+    },
     {
         "name": "calculate",
         "description": "Evaluate a math expression exactly. Supports + - * / // ** ^, parentheses, pi, e, and sqrt, sin, cos, tan, log (base 10), ln, abs, round, floor, ceil, factorial, min, max. Convert percentages first, e.g. '15% of 80' becomes '0.15 * 80'.",
