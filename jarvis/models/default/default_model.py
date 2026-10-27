@@ -62,6 +62,7 @@ from app_launcher import close_app, open_app
 from calculator import calculate, convert_units
 from clipboard import read_clipboard, write_clipboard
 from dictionary import define
+from file_operations import copy_file, create_folder, delete_file, move_file, rename_file
 from file_search import FOLDERS, search_files
 from finance import convert_currency, get_crypto_price, get_stock_price
 from focus_mode import get_do_not_disturb, set_do_not_disturb
@@ -70,6 +71,7 @@ from media_control import MEDIA_KEYS, get_now_playing, media_control
 from network_status import get_network_status, ping_host
 from news import TOPICS as NEWS_TOPICS, get_headlines, search_news
 from randomizer import flip_coin, pick_random, random_number, roll_dice
+from recipes import get_recipe, random_recipe, search_recipes
 from scores import LEAGUES, get_scores
 from sun_moon import get_sun_and_moon
 from system_specifications import get_system_specifications
@@ -77,6 +79,14 @@ from system_status import get_system_status
 from timer import cancel_timer, list_timers, set_timer
 
 UTILITY_FUNCTIONS = {
+    "search_recipes": search_recipes,
+    "get_recipe": get_recipe,
+    "random_recipe": random_recipe,
+    "delete_file": delete_file,
+    "move_file": move_file,
+    "copy_file": copy_file,
+    "rename_file": rename_file,
+    "create_folder": create_folder,
     "get_headlines": get_headlines,
     "search_news": search_news,
     "calculate": calculate,
@@ -124,7 +134,94 @@ _ZIP_CODE = {
     }
 }
 
+_FILE_PATH = (
+    "Full path, or a path starting with Desktop, Documents, Downloads, Pictures, Music or Videos "
+    "(e.g. Downloads/report.pdf). Only files inside those folders can be changed."
+)
+
 UTILITY_TOOLS = [
+    {
+        "name": "search_recipes",
+        "description": "Search recipes by dish name or main ingredient, e.g. 'lasagne' or 'chicken'. Returns matching dishes with their category and cuisine.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "query": {"type": "string"},
+                "limit": {"type": "integer", "description": "Max results, up to 20. Defaults to 8."},
+            },
+            "required": ["query"],
+        },
+    },
+    {
+        "name": "get_recipe",
+        "description": "Get a full recipe (ingredients with measures, instructions, video, source) by dish name, main ingredient, or a recipe id from search_recipes.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "query": {"type": "string", "description": "Dish name or main ingredient."},
+                "meal_id": {"type": "string", "description": "Recipe id from search_recipes."},
+            },
+        },
+    },
+    {
+        "name": "random_recipe",
+        "description": "Get a random full recipe, for 'what should I cook' or 'surprise me'.",
+        "input_schema": _NO_INPUT,
+    },
+    {
+        "name": "delete_file",
+        "description": "Move a file or folder to the Recycle Bin (it can be restored). The user is asked to approve every delete, so never claim something is deleted until this returns deleted: true. Find the file with search_files first if needed.",
+        "input_schema": {
+            "type": "object",
+            "properties": {"path": {"type": "string", "description": _FILE_PATH}},
+            "required": ["path"],
+        },
+    },
+    {
+        "name": "move_file",
+        "description": "Move a file or folder. If the destination is an existing folder, the item goes inside it; otherwise it's moved to that new path. Never overwrites.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "source": {"type": "string", "description": _FILE_PATH},
+                "destination": {"type": "string", "description": _FILE_PATH},
+            },
+            "required": ["source", "destination"],
+        },
+    },
+    {
+        "name": "copy_file",
+        "description": "Copy a file or folder. If the destination is an existing folder, the copy goes inside it. Never overwrites.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "source": {"type": "string", "description": _FILE_PATH},
+                "destination": {"type": "string", "description": _FILE_PATH},
+            },
+            "required": ["source", "destination"],
+        },
+    },
+    {
+        "name": "rename_file",
+        "description": "Rename a file or folder in place. Never overwrites.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "path": {"type": "string", "description": _FILE_PATH},
+                "new_name": {"type": "string", "description": "Just the new name, e.g. 'report-final.pdf'."},
+            },
+            "required": ["path", "new_name"],
+        },
+    },
+    {
+        "name": "create_folder",
+        "description": "Create a new folder (and any missing parent folders).",
+        "input_schema": {
+            "type": "object",
+            "properties": {"path": {"type": "string", "description": _FILE_PATH}},
+            "required": ["path"],
+        },
+    },
     {
         "name": "get_headlines",
         "description": "Get current news headlines by topic, from many outlets. Each story has its source, how long ago it was published, and the other outlets also covering it (more outlets means a bigger story). Use this for 'what's in the news' questions, before web search. 'local' uses the user's zip code. Links are Google News redirects, so use web search if the user wants an article's full details.",

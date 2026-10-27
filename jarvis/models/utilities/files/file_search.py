@@ -7,7 +7,7 @@ FOLDERS = ["Desktop", "Documents", "Downloads", "Pictures", "Music", "Videos"]
 SKIP_DIRS = {"node_modules", ".git", "__pycache__", ".venv", "venv", "AppData"}
 
 
-def _major_folders():
+def get_major_folders():
     home = Path.home()
     found = {}
     for folder in FOLDERS:
@@ -20,7 +20,7 @@ def _major_folders():
 
 
 def search_files(query="", folder=None, extension=None, limit=20):
-    folders = _major_folders()
+    folders = get_major_folders()
     if folder:
         match = next((name for name in folders if name.lower() == folder.strip().lower()), None)
         if not match:

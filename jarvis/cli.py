@@ -11,7 +11,28 @@ from rich.text import Text
 from jarvis.models.default.default_model import UTILITY_TOOLS, model_version, send_message, show_cost, user_name
 from jarvis.pricing import estimate_cost, format_cost, format_tokens
 
+# The utility folders are added to the path by the model module imported above.
+import file_operations  # noqa: E402
+
 console = Console()
+_active_status = None
+
+
+def _confirm(message):
+    """Asks before a destructive action, pausing the spinner so the prompt is readable."""
+    if _active_status:
+        _active_status.stop()
+    try:
+        answer = console.input(Text.assemble(("\n  ⚠  ", "bold yellow"), (message, "yellow"), ("  [y/N] ", "bold")))
+    except EOFError:
+        answer = ""
+    finally:
+        if _active_status:
+            _active_status.start()
+    return answer.strip().lower() in {"y", "yes"}
+
+
+file_operations.CONFIRM = _confirm
 
 BANNER = [
     "     ██╗ █████╗ ██████╗ ██╗   ██╗██╗███████╗",
@@ -48,6 +69,14 @@ TOOL_STYLES = {
     "calculate": ("🧮", "bright_cyan"),
     "convert_units": ("📐", "bright_cyan"),
     "search_files": ("📂", "bright_yellow"),
+    "delete_file": ("🗑 ", "red"),
+    "move_file": ("📦", "bright_yellow"),
+    "copy_file": ("📄", "bright_yellow"),
+    "rename_file": ("✏ ", "bright_yellow"),
+    "create_folder": ("📁", "bright_yellow"),
+    "search_recipes": ("🍳", "orange3"),
+    "get_recipe": ("🍳", "orange3"),
+    "random_recipe": ("🎲", "orange3"),
     "open_app": ("🚀", "bright_magenta"),
     "close_app": ("🚪", "bright_magenta"),
     "read_clipboard": ("📋", "bright_yellow"),
@@ -190,10 +219,15 @@ class _Session:
 
 
 def _ask(message):
+    global _active_status
     started = time.perf_counter()
     with console.status(Text("Thinking...", style="cyan"), spinner="dots12") as status:
+        _active_status = status
         session = _Session(status)
-        reply = send_message(message, "default", on_event=session.handle)
+        try:
+            reply = send_message(message, "default", on_event=session.handle)
+        finally:
+            _active_status = None
     elapsed = time.perf_counter() - started
 
     calls = f"{session.calls} tool call{'s' if session.calls != 1 else ''}" if session.calls else "no tools"
