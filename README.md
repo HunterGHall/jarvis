@@ -20,6 +20,7 @@ Jarvis can call these tools on its own whenever a question needs them, and the C
 - System specs and live status (CPU, memory, disks, uptime, battery, top processes)
 - Network status (IP addresses, Wi-Fi, latency) and ping
 - Media control (play/pause, skip, volume, mute) and now playing
+- Song lyrics, for a named song or whatever is playing right now
 - Open and close apps, websites, and your main folders
 - Clipboard read and write
 - Windows Do Not Disturb on and off
