@@ -282,7 +282,7 @@ UTILITY_TOOLS = [
     },
     {
         "name": "empty_recycle_bin",
-        "description": "PERMANENTLY erase everything in the Recycle Bin, which can't be undone (this is how to permanently delete files that delete_file moved there). The CLI asks the user to approve with a y/N prompt showing the item count and size, so when the user has clearly asked to empty or delete the Recycle Bin, call this right away without asking in chat first. Never claim it's emptied until this returns emptied: true.",
+        "description": "PERMANENTLY erase everything in the Recycle Bin, which can't be undone (this is how to permanently delete files that delete_file moved there). The CLI asks the user to approve, with a y/N prompt (or out loud in voice mode) showing the item count and size, so when the user has clearly asked to empty or delete the Recycle Bin, call this right away without asking in chat first. Never claim it's emptied until this returns emptied: true.",
         "input_schema": _NO_INPUT,
     },
     {
@@ -315,7 +315,7 @@ UTILITY_TOOLS = [
     },
     {
         "name": "delete_file",
-        "description": "Move files or folders to the Recycle Bin (they can be restored). The CLI itself asks the user to approve each delete with a y/N prompt that lists what will go, so when the user has clearly asked for a delete, call this right away: don't ask for confirmation in chat first, and don't comment on file names. Pass many paths in one call for a single approval. To empty a folder, pass the folder with contents_only=true instead of listing its files. Never claim something is deleted until this returns deleted: true.",
+        "description": "Move files or folders to the Recycle Bin (they can be restored). The CLI itself asks the user to approve each delete (a y/N prompt that lists what will go, or a spoken question in voice mode), so when the user has clearly asked for a delete, call this right away: don't ask for confirmation in chat first, and don't comment on file names. Pass many paths in one call for a single approval. To empty a folder, pass the folder with contents_only=true instead of listing its files. Never claim something is deleted until this returns deleted: true.",
         "input_schema": {
             "type": "object",
             "properties": {
