@@ -38,6 +38,7 @@ Jarvis can call these tools on its own whenever a question needs them, and the C
 - Move, copy, rename, create, and delete files and folders
 - Check the Recycle Bin and permanently empty it
 - Read files (text, code, CSV/JSON, Word `.docx`, and PDF) and write text files
+- Look inside any folder (optionally including its subfolders) and create folders with files already in them
 - Set the speaker volume to an exact percentage, or mute it
 - Run terminal commands in PowerShell, with your approval for every command
 
@@ -59,6 +60,7 @@ Jarvis can search, move, copy, rename, and delete files anywhere on your compute
 
 - Deleting always asks for your approval (`y/N`) first. The prompt lists how many items, how big, and which ones. One approval covers a whole batch, and a folder can be emptied in one go. Everything goes to the Recycle Bin so it can be restored.
 - Emptying the Recycle Bin is permanent, so it asks first too, showing the item count and size.
+- In voice mode (`/voice`), these questions are asked out loud and you answer by saying yes or no. An unclear answer, or any "no", leaves everything as it was. Terminal commands are always approved on the keyboard, because you need to read the exact command.
 - Writing a file never replaces an existing one by default. Overwriting asks first and sends the old version to the Recycle Bin. Nothing is written inside `C:\Windows` or `Program Files`.
 - Moves, copies, and renames never overwrite an existing file.
 - Whole drives, `C:\Windows`, `Program Files`, and your user folder itself are never deleted, moved, or renamed.
