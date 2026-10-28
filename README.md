@@ -39,11 +39,19 @@ Jarvis can call these tools on its own whenever a question needs them, and the C
 - Check the Recycle Bin and permanently empty it
 - Read files (text, code, CSV/JSON, Word `.docx`, and PDF) and write text files
 - Set the speaker volume to an exact percentage, or mute it
+- Run terminal commands in PowerShell, with your approval for every command
 
 **Tools**
 - Calculator and unit conversion
 - Timers (an alert prints in the terminal when one finishes)
 - Dice, coin flip, random number, and random pick
+
+### Terminal safety
+
+- Every command is shown to you in full and runs only after you answer `y` at the `y/N` prompt. There is no "always allow".
+- Commands run in Windows PowerShell as you, starting in your home folder. The working directory carries over between commands, but variables don't.
+- A command is stopped after 120 seconds, and long output is trimmed before it goes to Claude.
+- A command can do anything you could do in a terminal, so read what it's about to run. Prompt text from web pages or files can't approve anything for you.
 
 ### File safety
 
