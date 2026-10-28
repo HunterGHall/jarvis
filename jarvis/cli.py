@@ -63,6 +63,7 @@ TOOL_STYLES = {
     "define": ("📖", "bright_cyan"),
     "media_control": ("🎵", "magenta"),
     "get_now_playing": ("🎵", "magenta"),
+    "get_lyrics": ("🎤", "magenta"),
     "set_timer": ("⏱ ", "bright_red"),
     "list_timers": ("⏱ ", "bright_red"),
     "cancel_timer": ("⏱ ", "bright_red"),
