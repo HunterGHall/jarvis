@@ -38,14 +38,18 @@ client = anthropic.Anthropic(api_key=anthropic_api_key)
 model_version = config["anthropic"].get("model", "claude-sonnet-5-5")
 show_cost = config.get("settings", "show_cost", fallback="").strip().strip('"').lower() in {"true", "yes", "on", "1"}
 
-# Get training data
+# Get training data: the normal prompt, and the one used when replies are spoken aloud (voice mode)
 with open(MODELS_DIR / "training_data" / "jarvis.txt", "r", encoding="utf-8") as file:
     content = file.read()
+with open(MODELS_DIR / "training_data" / "jarvis-voice.txt", "r", encoding="utf-8") as file:
+    voice_content = file.read()
 
 # Tell the model who it is talking to
 user_name = config.get("personal", "name", fallback="").strip().strip('"')
 if user_name:
-    content += f"\n\nThe user's name is {user_name}, but address them as sir, never say there name unless directly asked."
+    name_note = f"\n\nThe user's name is {user_name}, but address them as sir, never say there name unless directly asked."
+    content += name_note
+    voice_content += name_note
 
 # Utilities import each other by bare module name (e.g. `from location import ...`),
 # so each utility folder has to be on the path
@@ -789,19 +793,11 @@ def _dump_content(message):
     return [block.model_dump(exclude_none=True) for block in message.content]
 
 
-# Appended to the system prompt in voice mode, since the reply is read aloud
-VOICE_PROMPT = (
-    "\n\nThe user is talking to you by voice and your reply will be read aloud. Answer in one to three short, "
-    "natural spoken sentences unless more is asked for. No markdown, lists, tables, emoji, or URLs; spell out "
-    "symbols and units the way you would say them."
-)
-
-
 def _create_message(messages, voice=False):
     return client.messages.create(
         model=model_version,
         max_tokens=4096,
-        system=content + VOICE_PROMPT if voice else content,
+        system=voice_content if voice else content,
         messages=messages,
         tools=UTILITY_TOOLS + [
         {
