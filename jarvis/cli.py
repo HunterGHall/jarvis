@@ -162,6 +162,7 @@ class _Session:
         self.started = {}
         self.stop = None
         self.tokens_in = 0
+        self.cached = 0  # input tokens read back from the prompt cache at a tenth of the price
         self.tokens_out = 0
         self.searches = 0
         # None once any call is on a model without known prices.
@@ -173,6 +174,7 @@ class _Session:
         self.tokens_in += sum(
             usage.get(key) or 0 for key in ("input_tokens", "cache_creation_input_tokens", "cache_read_input_tokens")
         )
+        self.cached += usage.get("cache_read_input_tokens") or 0
         self.tokens_out += usage.get("output_tokens") or 0
         self.searches += (usage.get("server_tool_use") or {}).get("web_search_requests") or 0
         call_cost = estimate_cost(event["model"], usage)
@@ -191,6 +193,8 @@ class _Session:
                 f"{format_tokens(self.tokens_out)} out {format_cost(self.cost_out)}",
                 f"{format_cost(self.cost_in + self.cost_out)} total",
             ]
+        if self.cached:
+            parts.append(f"{format_tokens(self.cached)} cached")
         if self.searches:
             # Web searches are billed per search, on top of the token cost.
             parts.append(f"+{self.searches} web search{'es' if self.searches != 1 else ''}")
