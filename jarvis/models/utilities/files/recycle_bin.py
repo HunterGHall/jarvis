@@ -56,8 +56,11 @@ def empty_recycle_bin():
         f"PERMANENTLY erase {items} item{'s' if items != 1 else ''} ({_format_size(size)}) "
         "from the Recycle Bin? This can't be undone."
     )
-    confirm = file_operations.CONFIRM
-    if confirm is None or not confirm(message):
+    spoken = (
+        f"Shall I permanently erase everything in the Recycle Bin? That's {items} item{'s' if items != 1 else ''}, "
+        f"{file_operations.spoken_size(size)}, and it can't be undone."
+    )
+    if not file_operations.confirm(message, spoken):
         return {"emptied": False, "reason": "The user declined, or confirmation wasn't available."}
 
     result = ctypes.windll.shell32.SHEmptyRecycleBinW(

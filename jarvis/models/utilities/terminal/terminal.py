@@ -43,8 +43,8 @@ def run_bash(tool_input, timeout=TIMEOUT_SECONDS):
     if not command:
         return "No command given.", True
 
-    confirm = file_operations.CONFIRM
-    if confirm is None or not confirm(f"Run this in PowerShell?\n\n    {command}\n"):
+    # No spoken version: the exact command has to be read on screen, not summarized aloud
+    if not file_operations.confirm(f"Run this in PowerShell?\n\n    {command}\n"):
         return "The user didn't approve this command, so it was not run.", True
 
     process = subprocess.Popen(

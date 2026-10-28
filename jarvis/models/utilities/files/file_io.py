@@ -4,8 +4,7 @@ import zipfile
 from pathlib import Path
 from xml.etree import ElementTree
 
-import file_operations
-from file_operations import _OperationError, _format_size, _recycle, _resolve, _run
+from file_operations import _OperationError, _format_size, _recycle, _resolve, _run, check_writable, confirm
 
 DEFAULT_CHARS = 20_000
 MAX_CHARS = 100_000
@@ -76,22 +75,12 @@ def read_file(path, offset=0, max_chars=DEFAULT_CHARS):
     return _run(operation, path, offset, max_chars)
 
 
-def _check_writable(target):
-    # Writing into the Windows or Program Files trees would only break the system.
-    for variable in ("SystemRoot", "ProgramFiles", "ProgramFiles(x86)"):
-        value = os.environ.get(variable)
-        if value:
-            root = Path(value).resolve()
-            if target == root or root in target.parents:
-                raise _OperationError(f"Files inside '{root}' aren't written to.")
-
-
 def write_file(path, content, mode="create"):
     """Write text to a file. mode: create (new files only), append, or overwrite (asks first)."""
 
     def operation(path, content, mode):
         target = _resolve(path)
-        _check_writable(target)
+        check_writable(target)
         mode = mode.strip().lower()
         if mode not in {"create", "append", "overwrite"}:
             raise _OperationError("mode must be create, append, or overwrite.")
@@ -107,7 +96,7 @@ def write_file(path, content, mode="create"):
         if mode == "overwrite" and exists:
             confirm = file_operations.CONFIRM
             message = f"Overwrite '{target}' ({_format_size(target.stat().st_size)}) with {len(content)} new characters? The old version goes to the Recycle Bin."
-            if confirm is None or not confirm(message):
+            if not confirm(message, f"Shall I replace {target.name}? The old version goes to the Recycle Bin."):
                 return {"written": False, "reason": "The user declined, or confirmation wasn't available."}
             # Recycle the old file first so its content can be restored.
             _recycle([target])

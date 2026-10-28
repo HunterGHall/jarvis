@@ -11,6 +11,29 @@ from file_search import get_major_folders
 # Left as None, deletes are refused, so nothing destructive can happen without a person saying yes.
 CONFIRM = None
 
+
+def confirm(message, spoken=None):
+    """Asks the user to approve an action. False if they decline or there is no way to ask."""
+    return CONFIRM is not None and bool(CONFIRM(message, spoken))
+
+
+def spoken_size(num_bytes):
+    """A size the way it's said aloud: '3.9 kilobytes', not '3.9 KB'."""
+    for unit in ("bytes", "kilobytes", "megabytes", "gigabytes"):
+        if num_bytes < 1024 or unit == "gigabytes":
+            return f"{num_bytes:.0f} {unit}" if unit == "bytes" else f"{num_bytes:.1f} {unit}"
+        num_bytes /= 1024
+
+
+def check_writable(target):
+    """Refuses paths inside Windows or Program Files, where writing would only break the system."""
+    for variable in ("SystemRoot", "ProgramFiles", "ProgramFiles(x86)"):
+        value = os.environ.get(variable)
+        if value:
+            root = Path(value).resolve()
+            if target == root or root in target.parents:
+                raise _OperationError(f"Files inside '{root}' aren't written to.")
+
 FO_DELETE = 0x0003
 FOF_SILENT = 0x0004
 FOF_NOCONFIRMATION = 0x0010
@@ -134,7 +157,13 @@ def delete_file(paths, contents_only=False):
             f"Move {len(targets)} item{'s' if len(targets) != 1 else ''}{where} "
             f"({_format_size(total)}: {names}) to the Recycle Bin?"
         )
-        if CONFIRM is None or not CONFIRM(message):
+        if len(targets) == 1:
+            what = targets[0].name
+        elif len(targets) <= 3:
+            what = ", ".join(target.name for target in targets[:-1]) + f" and {targets[-1].name}"
+        else:
+            what = f"{len(targets)} items, {spoken_size(total)}, starting with {targets[0].name}"
+        if not confirm(message, f"Shall I send {what} to the Recycle Bin?"):
             return {"deleted": False, "reason": "The user declined, or confirmation wasn't available."}
 
         _recycle(targets)
