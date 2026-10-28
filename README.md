@@ -86,12 +86,14 @@ Jarvis can search, move, copy, rename, and delete files anywhere on your compute
 
    [settings]
    show_cost = False
+   history_turns = 12
    ```
 
    - `model` is the Claude model Jarvis uses.
    - `name` is how Jarvis addresses you.
    - `zip_code` is your default location for weather, air quality, sun times, and local news.
-   - `show_cost = True` shows the token usage and cost of each reply.
+   - `show_cost = True` shows the token usage and cost of each reply, including how many input tokens came from the prompt cache.
+   - `history_turns` is how many of your recent messages (with Jarvis's replies) are remembered and re-sent with each new one. Older ones are dropped in chunks, since the whole conversation is sent every time. The default is 12.
 
 3. Run it:
 
