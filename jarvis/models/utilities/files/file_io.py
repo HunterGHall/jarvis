@@ -1,6 +1,8 @@
 import json
 import os
+import time
 import zipfile
+from datetime import datetime
 from pathlib import Path
 from xml.etree import ElementTree
 
@@ -8,6 +10,8 @@ from file_operations import _OperationError, _format_size, _recycle, _resolve, _
 
 DEFAULT_CHARS = 20_000
 MAX_CHARS = 100_000
+MAX_ITEMS = 1000
+LIST_TIME_BUDGET_SECONDS = 20
 WORD_NAMESPACE = "{http://schemas.openxmlformats.org/wordprocessingml/2006/main}"
 
 
@@ -41,11 +45,69 @@ def _read_text(path):
     return data.decode("utf-8", errors="replace")
 
 
+def _list_folder(target, recursive, limit):
+    limit = max(1, min(int(limit), MAX_ITEMS))
+    deadline = time.monotonic() + LIST_TIME_BUDGET_SECONDS
+    entries, timed_out = [], False
+    for current, folders, files in os.walk(target):
+        base = Path(current)
+        for is_folder, names in ((True, folders), (False, files)):
+            for name in names:
+                path = base / name
+                try:
+                    stat = path.stat()
+                except OSError:
+                    continue
+                entries.append((is_folder, path.relative_to(target), 0 if is_folder else stat.st_size, stat.st_mtime))
+        if not recursive:
+            break
+        if time.monotonic() > deadline:
+            timed_out = True
+            break
+
+    # Folders first, then by name
+    entries.sort(key=lambda entry: (not entry[0], str(entry[1]).lower()))
+    result = {
+        "path": str(target),
+        "folders": sum(1 for entry in entries if entry[0]),
+        "files": sum(1 for entry in entries if not entry[0]),
+        "total_size": _format_size(sum(entry[2] for entry in entries)),
+        "items": [
+            {
+                "name": relative.as_posix(),
+                "type": "folder" if is_folder else "file",
+                **({} if is_folder else {"size": _format_size(size)}),
+                "modified": datetime.fromtimestamp(modified).strftime("%Y-%m-%d %H:%M"),
+            }
+            for is_folder, relative, size, modified in entries[:limit]
+        ],
+    }
+    if len(entries) > limit:
+        result["truncated"] = f"Showing {limit} of {len(entries)} items. Raise limit to see more."
+    if timed_out:
+        result["incomplete"] = f"Stopped after {LIST_TIME_BUDGET_SECONDS}s, so there may be more items."
+    return result
+
+
+def list_folder(path, recursive=False, limit=200):
+    """List what's inside a folder: names, sizes, and dates. recursive=True includes everything in the subfolders too."""
+
+    def operation(path, recursive, limit):
+        target = _resolve(path)
+        if not target.is_dir():
+            raise _OperationError(f"No folder at '{target}'.")
+        return _list_folder(target, recursive, limit)
+
+    return _run(operation, path, recursive, limit)
+
+
 def read_file(path, offset=0, max_chars=DEFAULT_CHARS):
-    """Read a text, code, .docx, or .pdf file. Use offset to page through long ones."""
+    """Read a text, code, .docx, or .pdf file, or list a folder. Use offset to page through long files."""
 
     def operation(path, offset, max_chars):
         target = _resolve(path)
+        if target.is_dir():
+            return _list_folder(target, recursive=False, limit=200)
         if not target.is_file():
             raise _OperationError(f"No file at '{target}'.")
         suffix = target.suffix.lower()
@@ -94,7 +156,6 @@ def write_file(path, content, mode="create"):
             mode = "create"
 
         if mode == "overwrite" and exists:
-            confirm = file_operations.CONFIRM
             message = f"Overwrite '{target}' ({_format_size(target.stat().st_size)}) with {len(content)} new characters? The old version goes to the Recycle Bin."
             if not confirm(message, f"Shall I replace {target.name}? The old version goes to the Recycle Bin."):
                 return {"written": False, "reason": "The user declined, or confirmation wasn't available."}
