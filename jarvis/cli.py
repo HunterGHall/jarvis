@@ -262,7 +262,7 @@ def _ask(message, voice=False):
             Markdown(reply),
             title="[bold cyan]JARVIS[/]",
             title_align="left",
-            subtitle=Text(f"{elapsed:.1f}s · {calls}", style="dim"),
+            subtitle=Text(f"{elapsed:.1f}s · {calls}" + (" · voice prompt" if voice else ""), style="dim"),
             subtitle_align="right",
             border_style="cyan",
             padding=(1, 2),
