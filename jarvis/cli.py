@@ -233,14 +233,14 @@ class _Session:
             self.status.update(Text("Thinking...", style="cyan"))
 
 
-def _ask(message):
+def _ask(message, voice=False):
     global _active_status
     started = time.perf_counter()
     with console.status(Text("Thinking...", style="cyan"), spinner="dots12") as status:
         _active_status = status
         session = _Session(status)
         try:
-            reply = send_message(message, "default", on_event=session.handle)
+            reply = send_message(message, "default", on_event=session.handle, voice=voice)
         finally:
             _active_status = None
     elapsed = time.perf_counter() - started
@@ -271,22 +271,152 @@ def _ask(message):
     if show_cost:
         # Its own line, since a panel subtitle gets cut off on a narrow terminal.
         console.print(Align.right(Text(session.cost_summary(), style="dim yellow")))
+    return reply
 
 
-def run():
+_listen = False  # mic input instead of typing
+_speak = False  # replies read aloud
+
+
+def _voice_state(name):
+    labels = {"listening": ("🎙  listening...", "cyan"), "hearing": ("🎙  hearing you...", "bright_cyan"), "speaking": ("🔊 speaking...", "green")}
+    text, color = labels[name]
+    console.print(Text(f"  {text}", style=f"dim {color}"), end="\r")
+
+
+def _clear_line():
+    console.print(" " * 40, end="\r")
+
+
+def _hear():
+    """Listens for one utterance and returns the transcript ('' if nothing usable was heard)."""
+    from jarvis import voice
+
+    audio = voice.listen(_voice_state)
+    _clear_line()
+    if audio is None:
+        return ""
+    with console.status(Text("Transcribing...", style="cyan"), spinner="dots12"):
+        heard = voice.transcribe(audio)
+    if heard:
+        console.print(Text.assemble(("  you  ", "bold cyan"), (heard, "white")))
+    return heard
+
+
+def _set_voice_mode(listen, speak):
+    global _listen, _speak
+    if listen or speak:
+        from jarvis import voice
+
+        voice.check_ready()
+    _listen, _speak = listen, speak
+    parts = [name for name, on in (("listening to you", listen), ("speaking replies", speak)) if on]
+    console.print(Text("  🎙  Jarvis is " + " and ".join(parts) + "." if parts else "  Voice off, typing and text replies.", style="bold cyan"))
+    if listen:
+        console.print("[dim]  Say 'stop listening' or press Ctrl+C to go back to typing.[/dim]")
+
+
+def _voice_command(arguments):
+    """Handles `/voice ...` typed at the prompt."""
+    from jarvis import voice
+
+    words = arguments.split()
+    action = words[0].lower() if words else "both"
+    if action in {"both", "on"}:
+        _set_voice_mode(True, True)
+    elif action in {"listen", "in"}:
+        _set_voice_mode(True, False)
+    elif action in {"speak", "talk", "out"}:
+        _set_voice_mode(False, True)
+    elif action == "off":
+        _set_voice_mode(False, False)
+    elif action == "settings":
+        for name, (_, _, help_text) in voice.OPTIONS.items():
+            value = voice.settings[name]
+            console.print(Text.assemble((f"  {name:<15}", "bold cyan"), (f"{'(auto)' if value is None else value!s:<14}", "white"), (help_text, "dim")))
+        console.print("[dim]  Change one with: /voice set <name> <value>   (e.g. /voice set num_step 16)[/dim]")
+    elif action == "set" and len(words) >= 3:
+        name = words[1].lower()
+        try:
+            value = voice.set_option(name, " ".join(words[2:]))
+        except KeyError:
+            console.print(f"[red]  Unknown setting '{name}'. Type '/voice settings' to see them.[/red]")
+        except ValueError:
+            console.print(f"[red]  '{' '.join(words[2:])}' isn't a valid value for {name}.[/red]")
+        else:
+            console.print(f"  [cyan]{name}[/cyan] = {'(auto)' if value is None else value}  [dim]saved[/dim]")
+    elif action == "voices":
+        for profile in voice.list_voices():
+            console.print(Text.assemble((f"  {profile['name']}", "bold cyan"), (f"  {profile.get('kind', '')}", "dim")))
+    elif action == "test":
+        voice.check_ready()
+        voice.speak(" ".join(words[1:]) or "Good evening, sir. How does this sound?", _voice_state)
+        _clear_line()
+    else:
+        console.print(
+            "[dim]  /voice [both|listen|speak|off] · /voice settings · /voice set <name> <value> · /voice voices · /voice test [text][/dim]"
+        )
+
+
+def run(start_in_voice=False):
+    global _listen
+    from jarvis import voice
+
     _print_banner()
+    with console.status(Text("Loading voice...", style="cyan"), spinner="dots12"):
+        problem = voice.preload()
+    if problem:
+        console.print(f"[dim]  Voice isn't ready: {problem}[/dim]")
+    console.print("[dim]Type '/voice' to talk, '/voice speak' to type and hear replies, '/voice listen' to talk and read replies.[/dim]")
     try:
+        if start_in_voice:
+            try:
+                _set_voice_mode(True, True)
+            except Exception as error:
+                console.print(f"[red]{error}[/red]")
         while True:
             console.print()
-            message = console.input("[bold cyan]>[/] ").strip()
+            try:
+                if _listen:
+                    message = _hear()
+                    if voice_exit(message):
+                        _set_voice_mode(False, _speak)
+                        continue
+                else:
+                    message = console.input("[bold cyan]>[/] ").strip()
+            except KeyboardInterrupt:
+                if not _listen:
+                    raise
+                _clear_line()
+                _set_voice_mode(False, _speak)
+                continue
+            except Exception as error:
+                console.print(Panel(Text(f"{type(error).__name__}: {error}"), title="[bold red]Voice error[/]", title_align="left", border_style="red"))
+                time.sleep(1)
+                continue
             if not message:
                 continue
-            if message.lower() in {"exit", "quit"}:
+            lowered = message.lower()
+            if not _listen and lowered in {"exit", "quit"}:
                 break
             try:
-                _ask(message)
+                if not _listen and (lowered == "/voice" or lowered.startswith("/voice ")):
+                    _voice_command(message[6:].strip())
+                    continue
+                reply = _ask(message, voice=_speak)
+                if _speak and reply.strip():
+                    from jarvis import voice
+
+                    try:
+                        voice.speak(reply, _voice_state)
+                    except KeyboardInterrupt:
+                        pass  # Ctrl+C cuts the speech short
+                    finally:
+                        _clear_line()
             except KeyboardInterrupt:
-                raise
+                if not _listen:
+                    raise
+                _set_voice_mode(False, _speak)
             except Exception as error:
                 console.print(
                     Panel(
@@ -299,3 +429,9 @@ def run():
     except (KeyboardInterrupt, EOFError):
         console.print()
     console.print("[dim]Goodbye sir.[/dim]")
+
+
+def voice_exit(text):
+    from jarvis import voice
+
+    return bool(text) and voice.is_exit(text)
