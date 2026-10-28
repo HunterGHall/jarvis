@@ -1,4 +1,5 @@
 import json
+import re
 import time
 from datetime import datetime
 
@@ -18,8 +19,59 @@ console = Console()
 _active_status = None
 
 
-def _confirm(message):
-    """Asks before a destructive action, pausing the spinner so the prompt is readable."""
+NO_WORDS = {"no", "nope", "nah", "not", "never", "dont", "don't", "cancel", "stop", "abort", "negative", "wait"}
+YES_WORDS = {"yes", "yeah", "yep", "yup", "sure", "ok", "okay", "affirmative", "confirm", "confirmed", "proceed", "absolutely"}
+YES_PHRASES = ("go ahead", "do it", "go for it")
+
+
+def _classify_answer(heard):
+    """'yes' or 'no' for a spoken reply, None if it's unclear. A no anywhere wins, so a doubtful answer never deletes."""
+    lowered = heard.lower().replace("’", "'")
+    words = set(re.findall(r"[a-z']+", lowered))
+    if words & NO_WORDS:
+        return "no"
+    if words & YES_WORDS or any(phrase in lowered for phrase in YES_PHRASES):
+        return "yes"
+    return None
+
+
+def _confirm_by_voice(message, spoken):
+    """Asks out loud (when replies are spoken) and listens for yes or no. None means voice failed; ask on the keyboard."""
+    from jarvis import voice
+
+    console.print(Text.assemble(("\n  ⚠  ", "bold yellow"), (message, "yellow")))
+    console.print("[dim]  Say yes or no. Ctrl+C declines.[/dim]")
+    try:
+        for attempt in range(2):
+            if _speak:
+                voice.speak(spoken if attempt == 0 else "Sorry, I didn't catch that. Shall I go ahead?", _voice_state)
+                _clear_line()
+            audio = voice.listen(_voice_state)
+            _clear_line()
+            if audio is None:
+                continue
+            heard = voice.transcribe(audio)
+            if heard:
+                console.print(Text.assemble(("  you  ", "bold cyan"), (heard, "white")))
+            answer = _classify_answer(heard)
+            if answer:
+                return answer == "yes"
+    except KeyboardInterrupt:
+        console.print("[dim]  Declined.[/dim]")
+        return False
+    except Exception as error:
+        console.print(f"[red]  Couldn't use voice for this question ({type(error).__name__}). Asking on the keyboard instead.[/red]")
+        return None
+    console.print("[dim]  No clear answer, so nothing was changed.[/dim]")
+    return False
+
+
+def _confirm(message, spoken=None):
+    """Asks before a destructive action, pausing the spinner so the prompt is readable.
+
+    While you're talking to Jarvis (/voice), questions that come with a spoken version are asked and answered by voice;
+    everything else, like the exact terminal command to run, stays on the keyboard.
+    """
     if _active_status:
         _active_status.stop()
     try:
