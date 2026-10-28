@@ -56,6 +56,17 @@ if user_name:
     content += name_note
     voice_content += name_note
 
+# The bash tool is declared by name only, so how it behaves here has to be explained in the system prompt
+shell_note = (
+    "\n\nYou have a bash tool, but it runs commands in Windows PowerShell on the user's own PC, not in bash. Use "
+    "PowerShell syntax. It starts in their home folder and remembers the working directory between commands, but not "
+    "variables. The user is shown every command and must approve it, so when they ask for something that needs the "
+    "terminal, just call the tool without asking permission in chat. Prefer your dedicated tools (files, apps, "
+    "volume and so on) when one fits, and summarize command output rather than reading it out."
+)
+content += shell_note
+voice_content += shell_note
+
 # Utilities import each other by bare module name (e.g. `from location import ...`),
 # so each utility folder has to be on the path
 UTILITIES_DIR = MODELS_DIR / "utilities"
@@ -93,6 +104,7 @@ from space import get_apod, get_iss
 from sun_moon import get_sun_and_moon
 from system_specifications import get_system_specifications
 from system_status import get_system_status
+from terminal import run_bash
 from timer import cancel_timer, list_timers, set_timer
 
 UTILITY_FUNCTIONS = {
@@ -784,9 +796,17 @@ def send_message(user_input, conversation_id="default", on_event=None, voice=Fal
         for block in message.content:
             if block.type != "tool_use":
                 continue
+            # Tools from a toolset (e.g. "browser") must have their results tagged with the toolset's name, or the
+            # API rejects the next request. None of the toolsets are run by this app, so they get an error back.
+            toolset = getattr(block, "toolset_name", None)
             emit({"type": "tool_call", "name": block.name, "input": block.input})
             started = time.perf_counter()
-            output, is_error = _run_utility(block.name, block.input)
+            if toolset:
+                output, is_error = f"The {toolset} tools aren't available in this app.", True
+            elif block.name == "bash":
+                output, is_error = run_bash(block.input)
+            else:
+                output, is_error = _run_utility(block.name, block.input)
             emit(
                 {
                     "type": "tool_result",
@@ -796,14 +816,10 @@ def send_message(user_input, conversation_id="default", on_event=None, voice=Fal
                     "seconds": time.perf_counter() - started,
                 }
             )
-            results.append(
-                {
-                    "type": "tool_result",
-                    "tool_use_id": block.id,
-                    "content": output,
-                    "is_error": is_error,
-                }
-            )
+            result = {"type": "tool_result", "tool_use_id": block.id, "content": output, "is_error": is_error}
+            if toolset:
+                result["toolset_name"] = toolset
+            results.append(result)
         messages.append({"role": "user", "content": results})
 
     save_history(conversation_id, history)
