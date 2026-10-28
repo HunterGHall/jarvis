@@ -3,7 +3,7 @@
   <em>Just A Rather Very Intelligent System — a personal voice assistant built in Python</em>
 </p>
 <p align="center">
-  <img src="https://img.shields.io/badge/python-3.12%2B-blue" alt="Python version">
+  <img src="https://img.shields.io/badge/python-3.10%2B-blue" alt="Python version">
   <img src="https://img.shields.io/badge/license-MIT-green" alt="License">
   <img src="https://img.shields.io/badge/status-active-brightgreen" alt="Status">
 </p>
