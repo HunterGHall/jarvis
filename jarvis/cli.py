@@ -403,7 +403,7 @@ def run(start_in_voice=False):
                 if not _listen and (lowered == "/voice" or lowered.startswith("/voice ")):
                     _voice_command(message[6:].strip())
                     continue
-                reply = _ask(message, voice=_speak)
+                reply = _ask(message, voice=_listen or _speak)
                 if _speak and reply.strip():
                     from jarvis import voice
 
