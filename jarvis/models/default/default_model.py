@@ -37,6 +37,11 @@ anthropic_api_key = config["anthropic"]["anthropic_api_key"]
 client = anthropic.Anthropic(api_key=anthropic_api_key)
 model_version = config["anthropic"].get("model", "claude-sonnet-5-5")
 show_cost = config.get("settings", "show_cost", fallback="").strip().strip('"').lower() in {"true", "yes", "on", "1"}
+# How many of your most recent messages (and Jarvis's replies to them) are kept and sent along with a new one
+try:
+    history_turns = max(2, int(config.get("settings", "history_turns", fallback="").strip().strip('"') or 12))
+except ValueError:
+    history_turns = 12
 
 # Get training data: the normal prompt, and the one used when replies are spoken aloud (voice mode)
 with open(MODELS_DIR / "training_data" / "jarvis.txt", "r", encoding="utf-8") as file:
@@ -707,6 +712,25 @@ def save_history(conversation_id, history):
     )
 
 
+def _trim_history(history):
+    """Keeps only the most recent turns, since the whole conversation is re-sent with every request.
+
+    It trims in chunks, once the history is half again as long as the limit, instead of dropping one turn each time,
+    because every change to the start of the history starts the prompt cache over.
+    """
+    turn_starts = [i for i, message in enumerate(history) if message["role"] == "user" and isinstance(message["content"], str)]
+    if len(turn_starts) <= history_turns + history_turns // 2:
+        return history
+
+    trimmed = history[turn_starts[-history_turns]:]
+    for message in trimmed:
+        if message["role"] == "assistant" and isinstance(message["content"], list):
+            # Thinking blocks belong to the conversation that came before them, which has just changed
+            message["content"] = [block for block in message["content"] if block.get("type") not in {"thinking", "redacted_thinking"}]
+    # A turn that was only thinking is now empty, and the API rejects empty messages
+    return [message for message in trimmed if message["content"]]
+
+
 def _run_utility(name, tool_input):
     function = UTILITY_FUNCTIONS.get(name)
     if function is None:
@@ -742,7 +766,7 @@ def _emit_server_tools(message, emit):
 def send_message(user_input, conversation_id="default", on_event=None, voice=False):
     # on_event gets a dict per tool call/result so a front end can show what the model is doing
     emit = on_event or (lambda _: None)
-    history = load_history(conversation_id)
+    history = _trim_history(load_history(conversation_id))
     history.append({"role": "user", "content": user_input})
 
     # Tool turns are kept in history so later turns can see what was actually looked up
