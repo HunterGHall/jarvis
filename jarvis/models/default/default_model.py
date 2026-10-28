@@ -70,6 +70,7 @@ from recycle_bin import empty_recycle_bin, get_recycle_bin
 from finance import convert_currency, get_crypto_price, get_stock_price
 from focus_mode import get_do_not_disturb, set_do_not_disturb
 from forecast import get_daily_forecast, get_hourly_forecast
+from lyrics import get_lyrics
 from media_control import MEDIA_KEYS, get_now_playing, media_control
 from volume import get_volume, set_volume
 from network_status import get_network_status, ping_host
@@ -83,6 +84,7 @@ from system_status import get_system_status
 from timer import cancel_timer, list_timers, set_timer
 
 UTILITY_FUNCTIONS = {
+    "get_lyrics": get_lyrics,
     "get_holidays": get_holidays,
     "get_volume": get_volume,
     "set_volume": set_volume,
@@ -151,6 +153,18 @@ _FILE_PATH = (
 )
 
 UTILITY_TOOLS = [
+    {
+        "name": "get_lyrics",
+        "description": "Look up a song's lyrics (from LRCLIB). With no song given, it looks up whatever is playing on the user's computer right now. Use it to answer questions about a song's lyrics or meaning, or to quote a few lines; don't reproduce a whole song's lyrics in a reply.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "song": {"type": "string", "description": "Song title. Leave out to use the song that's playing."},
+                "artist": {"type": "string", "description": "Artist, which helps pick the right version."},
+                "synced": {"type": "boolean", "description": "Return line-by-line timestamps ([mm:ss.xx]) instead of plain lyrics."},
+            },
+        },
+    },
     {
         "name": "get_holidays",
         "description": "Get public holidays: the upcoming ones by default (with days until each), or every holiday in a given year. Defaults to the US; use a two-letter country code for others.",
