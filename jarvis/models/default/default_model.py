@@ -62,6 +62,7 @@ from app_launcher import close_app, open_app
 from calculator import calculate, convert_units
 from clipboard import read_clipboard, write_clipboard
 from dictionary import define
+from earthquakes import get_earthquakes
 from file_io import read_file, write_file
 from file_operations import copy_file, create_folder, delete_file, move_file, rename_file
 from holidays import get_holidays
@@ -78,12 +79,16 @@ from news import TOPICS as NEWS_TOPICS, get_headlines, search_news
 from randomizer import flip_coin, pick_random, random_number, roll_dice
 from recipes import get_recipe, random_recipe, search_recipes
 from scores import LEAGUES, get_scores
+from space import get_apod, get_iss
 from sun_moon import get_sun_and_moon
 from system_specifications import get_system_specifications
 from system_status import get_system_status
 from timer import cancel_timer, list_timers, set_timer
 
 UTILITY_FUNCTIONS = {
+    "get_apod": get_apod,
+    "get_iss": get_iss,
+    "get_earthquakes": get_earthquakes,
     "get_lyrics": get_lyrics,
     "get_holidays": get_holidays,
     "get_volume": get_volume,
@@ -153,6 +158,35 @@ _FILE_PATH = (
 )
 
 UTILITY_TOOLS = [
+    {
+        "name": "get_apod",
+        "description": "Get NASA's Astronomy Picture of the Day: title, a short explanation, credit, and a link to the image or video. Defaults to today.",
+        "input_schema": {
+            "type": "object",
+            "properties": {"date": {"type": "string", "description": "Optional date as YYYY-MM-DD, any day since 1995-06-16."}},
+        },
+    },
+    {
+        "name": "get_iss",
+        "description": "Get where the International Space Station is right now: latitude and longitude, what it's over, altitude, speed, and whether it's in sunlight.",
+        "input_schema": _NO_INPUT,
+    },
+    {
+        "name": "get_earthquakes",
+        "description": "Get recent earthquakes from the USGS, newest first or strongest first, worldwide or within a radius of the user's location. Includes magnitude, location, depth, how long ago, tsunami messages, felt reports, and the USGS impact alert color. total_matches counts every match even when fewer are returned.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "min_magnitude": {"type": "number", "description": "Smallest magnitude to include. Defaults to 4.5 (use 2.5 or lower for near-me)."},
+                "days": {"type": "integer", "description": "How many days back, up to 30. Defaults to 1."},
+                "limit": {"type": "integer", "description": "How many to return, up to 50. Defaults to 10."},
+                "sort_by": {"type": "string", "enum": ["time", "magnitude"], "description": "Newest first (default) or strongest first."},
+                "near_me": {"type": "boolean", "description": "Only earthquakes near the user's zip code."},
+                "radius_miles": {"type": "number", "description": "With near_me, how far to look. Defaults to 200."},
+                **_ZIP_CODE,
+            },
+        },
+    },
     {
         "name": "get_lyrics",
         "description": "Look up a song's lyrics (from LRCLIB). With no song given, it looks up whatever is playing on the user's computer right now. Use it to answer questions about a song's lyrics or meaning, or to quote a few lines; don't reproduce a whole song's lyrics in a reply.",
