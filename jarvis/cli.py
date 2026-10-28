@@ -75,13 +75,18 @@ def _confirm(message, spoken=None):
     if _active_status:
         _active_status.stop()
     try:
-        answer = console.input(Text.assemble(("\n  ⚠  ", "bold yellow"), (message, "yellow"), ("  [y/N] ", "bold")))
-    except EOFError:
-        answer = ""
+        if spoken and _listen:
+            answer = _confirm_by_voice(message, spoken)
+            if answer is not None:
+                return answer
+        try:
+            typed = console.input(Text.assemble(("\n  ⚠  ", "bold yellow"), (message, "yellow"), ("  [y/N] ", "bold")))
+        except EOFError:
+            typed = ""
+        return typed.strip().lower() in {"y", "yes"}
     finally:
         if _active_status:
             _active_status.start()
-    return answer.strip().lower() in {"y", "yes"}
 
 
 file_operations.CONFIRM = _confirm
@@ -126,6 +131,7 @@ TOOL_STYLES = {
     "convert_units": ("📐", "bright_cyan"),
     "bash": ("💻", "bright_red"),
     "search_files": ("📂", "bright_yellow"),
+    "list_folder": ("🗂 ", "bright_yellow"),
     "read_file": ("📖", "bright_yellow"),
     "write_file": ("📝", "bright_yellow"),
     "get_holidays": ("🎉", "bright_cyan"),
