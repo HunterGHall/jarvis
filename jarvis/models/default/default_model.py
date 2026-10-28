@@ -833,34 +833,36 @@ def _dump_content(message):
     return [block.model_dump(exclude_none=True) for block in message.content]
 
 
+CACHE = {"type": "ephemeral"}
+
+# The same list on every request, in the same order: any change to it (or to the system prompt) starts the cache over
+TOOLS = UTILITY_TOOLS + [
+    {"type": "bash_20250124", "name": "bash"},
+    {
+        "name": "web_fetch",
+        "type": "web_fetch_20260318",
+        "allowed_callers": ["direct"],
+    },
+    {
+        "name": "web_search",
+        "type": "web_search_20260318",
+        "allowed_callers": ["direct"],
+    },
+]
+# A cache breakpoint at the end of the tools, so they stay cached even when the system prompt changes (voice mode)
+TOOLS[-1] = {**TOOLS[-1], "cache_control": CACHE}
+
+
 def _create_message(messages, voice=False):
     return client.messages.create(
         model=model_version,
         max_tokens=4096,
-        system=voice_content if voice else content,
+        # Prompt caching: the tools, the system prompt, and the conversation so far are mostly identical from one
+        # request to the next, so they're read back from the cache at a tenth of the price
+        system=[{"type": "text", "text": voice_content if voice else content, "cache_control": CACHE}],
         messages=messages,
-        tools=UTILITY_TOOLS + [
-        {
-            "name": "web_fetch",
-            "type": "web_fetch_20260318",
-            "allowed_callers": ["direct"],
-        },
-        {
-            "type": "browser_toolset_20260801",
-            "configs": {
-                "javascript_exec": {"enabled": True},
-                "file_upload": {"enabled": True},
-                "read_console": {"enabled": True},
-                "read_network": {"enabled": True},
-            },
-        },
-        {
-            "name": "web_search",
-            "type": "web_search_20260318",
-            "allowed_callers": ["direct"],
-        },
-        {"type": "computer_toolset_20260801"},
-        ],
+        tools=TOOLS,
+        cache_control=CACHE,
         output_config={"effort": "low" if voice else "medium"},
     )
 
