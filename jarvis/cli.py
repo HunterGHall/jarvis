@@ -72,6 +72,7 @@ TOOL_STYLES = {
     "cancel_timer": ("⏱ ", "bright_red"),
     "calculate": ("🧮", "bright_cyan"),
     "convert_units": ("📐", "bright_cyan"),
+    "bash": ("💻", "bright_red"),
     "search_files": ("📂", "bright_yellow"),
     "read_file": ("📖", "bright_yellow"),
     "write_file": ("📝", "bright_yellow"),
