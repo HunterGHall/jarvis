@@ -7,7 +7,8 @@ from pathlib import Path
 
 from file_search import get_major_folders
 
-# Set by the front end to ask the user before anything is deleted: confirm(message) -> bool.
+# Set by the front end to ask the user before anything is deleted: CONFIRM(message, spoken=None) -> bool.
+# `spoken` is a short version of the question for when the user is talking to Jarvis and should be asked out loud.
 # Left as None, deletes are refused, so nothing destructive can happen without a person saying yes.
 CONFIRM = None
 
@@ -236,15 +237,45 @@ def rename_file(path, new_name):
     return _run(operation, path, new_name)
 
 
-def create_folder(path):
-    def operation(path):
-        target = _resolve(path)
-        if target.exists():
-            raise _OperationError(f"'{target}' already exists.")
-        target.mkdir(parents=True)
-        return {"created": True, "path": str(target)}
+def create_folder(path, files=None):
+    """Creates a folder, and optionally text files inside it: files maps a name to its contents (names may include subfolders)."""
 
-    return _run(operation, path)
+    def operation(path, files):
+        target = _resolve(path)
+        check_writable(target)
+        if target.exists() and not target.is_dir():
+            raise _OperationError(f"'{target}' is a file, not a folder.")
+        if target.exists() and not files:
+            raise _OperationError(f"'{target}' already exists.")
+
+        # Check every name before creating anything, so a bad one doesn't leave a half-made folder
+        planned = []
+        for name, text in (files or {}).items():
+            relative = Path(str(name).replace("\\", "/"))
+            destination = (target / relative).resolve()
+            if relative.is_absolute() or target not in destination.parents:
+                raise _OperationError(f"'{name}' isn't inside the folder.")
+            planned.append((relative, destination, str(text)))
+
+        folder_created = not target.exists()
+        target.mkdir(parents=True, exist_ok=True)
+        written, skipped = [], []
+        for relative, destination, text in planned:
+            if destination.exists():
+                skipped.append(relative.as_posix())
+                continue
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            destination.write_text(text, encoding="utf-8", newline="")
+            written.append(relative.as_posix())
+
+        result = {"path": str(target), "folder_created": folder_created}
+        if files:
+            result["files_written"] = written
+        if skipped:
+            result["skipped_existing"] = skipped
+        return result
+
+    return _run(operation, path, files)
 
 
 if __name__ == "__main__":
