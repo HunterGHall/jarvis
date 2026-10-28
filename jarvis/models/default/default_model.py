@@ -366,7 +366,7 @@ UTILITY_TOOLS = [
     },
     {
         "name": "create_folder",
-        "description": "Create a new folder (and any missing parent folders).",
+        "description": "Create a folder (and any missing parent folders), optionally with text files already inside it. Use files to write a whole project or set of notes in one call. Existing files are never overwritten, and files can be added to a folder that already exists.",
         "input_schema": {
             "type": "object",
             "properties": {"path": {"type": "string", "description": _FILE_PATH}},
