@@ -84,7 +84,7 @@ from calculator import calculate, convert_units
 from clipboard import read_clipboard, write_clipboard
 from dictionary import define
 from earthquakes import get_earthquakes
-from file_io import read_file, write_file
+from file_io import list_folder, read_file, write_file
 from file_operations import copy_file, create_folder, delete_file, move_file, rename_file
 from holidays import get_holidays
 from file_search import search_files
@@ -115,6 +115,7 @@ UTILITY_FUNCTIONS = {
     "get_holidays": get_holidays,
     "get_volume": get_volume,
     "set_volume": set_volume,
+    "list_folder": list_folder,
     "read_file": read_file,
     "write_file": write_file,
     "get_recycle_bin": get_recycle_bin,
@@ -250,8 +251,21 @@ UTILITY_TOOLS = [
         },
     },
     {
+        "name": "list_folder",
+        "description": "Look inside a folder anywhere on the computer: every file and subfolder in it, with sizes and modified dates, folders first. Set recursive to include everything in the subfolders too. To read what's inside the files, follow up with read_file.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "path": {"type": "string", "description": _FILE_PATH},
+                "recursive": {"type": "boolean", "description": "Include everything in the subfolders. Defaults to false."},
+                "limit": {"type": "integer", "description": "Max items to list, up to 1000. Defaults to 200."},
+            },
+            "required": ["path"],
+        },
+    },
+    {
         "name": "read_file",
-        "description": "Read the contents of a text, code, CSV/JSON, .docx, or .pdf file anywhere on the computer. Long files come back in pages: use the offset from the truncated note to continue.",
+        "description": "Read the contents of a text, code, CSV/JSON, .docx, or .pdf file anywhere on the computer. Long files come back in pages: use the offset from the truncated note to continue. Given a folder, it lists what's inside instead.",
         "input_schema": {
             "type": "object",
             "properties": {
@@ -369,7 +383,14 @@ UTILITY_TOOLS = [
         "description": "Create a folder (and any missing parent folders), optionally with text files already inside it. Use files to write a whole project or set of notes in one call. Existing files are never overwritten, and files can be added to a folder that already exists.",
         "input_schema": {
             "type": "object",
-            "properties": {"path": {"type": "string", "description": _FILE_PATH}},
+            "properties": {
+                "path": {"type": "string", "description": _FILE_PATH},
+                "files": {
+                    "type": "object",
+                    "description": "Files to create inside the folder: each key is a file name, which may include subfolders such as 'src/main.py', and each value is that file's text.",
+                    "additionalProperties": {"type": "string"},
+                },
+            },
             "required": ["path"],
         },
     },
