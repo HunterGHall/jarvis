@@ -12,6 +12,8 @@ Jarvis can call these tools on its own whenever a question needs them, and the C
 - Stocks, crypto, and currency conversion
 - Live sports scores (NFL, NBA, WNBA, MLB, NHL, MLS, Premier League, college football and basketball)
 - News headlines by topic (including local news for your zip code) and news search, with the other outlets covering each story
+- Space: NASA's Astronomy Picture of the Day and the live position of the International Space Station
+- Recent earthquakes from the USGS, worldwide or near you
 - Public holidays, upcoming or by year, for any country
 - Dictionary definitions, synonyms, and antonyms
 - Recipes by dish or ingredient, plus a random recipe
