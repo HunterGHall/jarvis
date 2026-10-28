@@ -52,7 +52,8 @@ if user_name:
 UTILITIES_DIR = MODELS_DIR / "utilities"
 for folder in UTILITIES_DIR.iterdir():
     if folder.is_dir():
-        sys.path.append(str(folder))
+        # Front of the path so a utility's name wins over installed modules (pywin32 ships its own `timer`)
+        sys.path.insert(0, str(folder))
 
 from current_date import get_date
 from current_time import get_time
