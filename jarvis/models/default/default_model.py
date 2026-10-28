@@ -735,7 +735,7 @@ def _emit_server_tools(message, emit):
             )
 
 
-def send_message(user_input, conversation_id="default", on_event=None):
+def send_message(user_input, conversation_id="default", on_event=None, voice=False):
     # on_event gets a dict per tool call/result so a front end can show what the model is doing
     emit = on_event or (lambda _: None)
     history = load_history(conversation_id)
@@ -745,7 +745,7 @@ def send_message(user_input, conversation_id="default", on_event=None):
     messages = history
 
     while True:
-        message = _create_message(messages)
+        message = _create_message(messages, voice)
         emit({"type": "usage", "model": model_version, "usage": message.usage.model_dump()})
         messages.append({"role": "assistant", "content": _dump_content(message)})
         _emit_server_tools(message, emit)
@@ -789,11 +789,19 @@ def _dump_content(message):
     return [block.model_dump(exclude_none=True) for block in message.content]
 
 
-def _create_message(messages):
+# Appended to the system prompt in voice mode, since the reply is read aloud
+VOICE_PROMPT = (
+    "\n\nThe user is talking to you by voice and your reply will be read aloud. Answer in one to three short, "
+    "natural spoken sentences unless more is asked for. No markdown, lists, tables, emoji, or URLs; spell out "
+    "symbols and units the way you would say them."
+)
+
+
+def _create_message(messages, voice=False):
     return client.messages.create(
         model=model_version,
         max_tokens=4096,
-        system=content,
+        system=content + VOICE_PROMPT if voice else content,
         messages=messages,
         tools=UTILITY_TOOLS + [
         {
@@ -817,7 +825,7 @@ def _create_message(messages):
         },
         {"type": "computer_toolset_20260801"},
         ],
-        output_config={"effort": "medium"},
+        output_config={"effort": "low" if voice else "medium"},
     )
 
 
