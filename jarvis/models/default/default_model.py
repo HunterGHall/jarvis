@@ -25,7 +25,11 @@ if not CONFIG_PATH.exists():
         "zip_code = YOUR_ZIP\n"
         "\n"
         "[settings]\n"
-        "show_cost = False\n",
+        "show_cost = False\n"
+        "\n"
+        "# Optional: a classic GitHub personal access token with the 'user' scope, to change your GitHub status\n"
+        "[github]\n"
+        "token =\n",
         encoding="utf-8",
     )
     sys.exit(f"Created {CONFIG_PATH}. Fill in your details and run again.")
@@ -92,6 +96,7 @@ from recycle_bin import empty_recycle_bin, get_recycle_bin
 from finance import convert_currency, get_crypto_price, get_stock_price
 from focus_mode import get_do_not_disturb, set_do_not_disturb
 from forecast import get_daily_forecast, get_hourly_forecast
+from github_status import clear_github_status, get_github_status, set_github_status
 from lyrics import get_lyrics
 from media_control import MEDIA_KEYS, get_now_playing, media_control
 from volume import get_volume, set_volume
@@ -108,6 +113,9 @@ from terminal import run_bash
 from timer import cancel_timer, list_timers, set_timer
 
 UTILITY_FUNCTIONS = {
+    "get_github_status": get_github_status,
+    "set_github_status": set_github_status,
+    "clear_github_status": clear_github_status,
     "get_apod": get_apod,
     "get_iss": get_iss,
     "get_earthquakes": get_earthquakes,
@@ -181,6 +189,30 @@ _FILE_PATH = (
 )
 
 UTILITY_TOOLS = [
+    {
+        "name": "get_github_status",
+        "description": "Check what status (emoji and message) is currently shown on the user's GitHub profile.",
+        "input_schema": _NO_INPUT,
+    },
+    {
+        "name": "set_github_status",
+        "description": "Set the status shown on the user's GitHub profile, e.g. 'Coding' with a computer emoji. Give minutes if it should clear itself (like 120 for two hours). Replaces any status already there.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "message": {"type": "string", "description": "What to show, up to 80 characters."},
+                "emoji": {"type": "string", "description": "An emoji, or its name such as computer, coffee, palm_tree. Optional."},
+                "minutes": {"type": "number", "description": "Clear the status automatically after this many minutes. Leave out to keep it until it's changed."},
+                "busy": {"type": "boolean", "description": "Show GitHub's 'busy' indicator, for when the user is unavailable."},
+            },
+            "required": ["message"],
+        },
+    },
+    {
+        "name": "clear_github_status",
+        "description": "Remove the status from the user's GitHub profile.",
+        "input_schema": _NO_INPUT,
+    },
     {
         "name": "get_apod",
         "description": "Get NASA's Astronomy Picture of the Day: title, a short explanation, credit, and a link to the image or video. Defaults to today.",
