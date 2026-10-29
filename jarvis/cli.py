@@ -4,18 +4,20 @@ import time
 from datetime import datetime
 
 from rich.align import Align
-from rich.console import Console, Group
+from rich.console import Group
 from rich.markdown import Markdown
 from rich.panel import Panel
 from rich.text import Text
 
-from jarvis.models.default.default_model import UTILITY_TOOLS, model_version, send_message, show_cost, user_name
+from jarvis.models.default.default_model import UTILITY_TOOLS, auto_resize, model_version, send_message, show_cost, user_name
 from jarvis.pricing import estimate_cost, format_cost, format_tokens
+from jarvis.screen import console, screen
 
 # The utility folders are added to the path by the model module imported above.
 import file_operations  # noqa: E402
 
-console = Console()
+PROMPT = "[bold cyan]>[/] "
+PROMPT_WIDTH = 2  # the visible width of "> "
 _active_status = None
 
 
@@ -445,6 +447,8 @@ def run(start_in_voice=False):
     global _listen
     from jarvis import voice
 
+    screen.enabled = auto_resize
+    screen.start()
     _print_banner()
     with console.status(Text("Loading voice...", style="cyan"), spinner="dots12"):
         problem = voice.preload()
@@ -458,6 +462,7 @@ def run(start_in_voice=False):
             except Exception as error:
                 console.print(f"[red]{error}[/red]")
         while True:
+            screen.repaint_if_resized()
             console.print()
             try:
                 if _listen:
@@ -466,7 +471,8 @@ def run(start_in_voice=False):
                         _set_voice_mode(False, _speak)
                         continue
                 else:
-                    message = console.input("[bold cyan]>[/] ").strip()
+                    with screen.prompt(PROMPT, PROMPT_WIDTH):
+                        message = console.input(PROMPT).strip()
             except KeyboardInterrupt:
                 if not _listen:
                     raise

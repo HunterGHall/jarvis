@@ -41,6 +41,8 @@ anthropic_api_key = config["anthropic"]["anthropic_api_key"]
 client = anthropic.Anthropic(api_key=anthropic_api_key)
 model_version = config["anthropic"].get("model", "claude-sonnet-5-5")
 show_cost = config.get("settings", "show_cost", fallback="").strip().strip('"').lower() in {"true", "yes", "on", "1"}
+# Redraw the screen at the new width when the terminal window is resized
+auto_resize = config.get("settings", "auto_resize", fallback="true").strip().strip('"').lower() not in {"false", "no", "off", "0"}
 # How many of your most recent messages (and Jarvis's replies to them) are kept and sent along with a new one
 try:
     history_turns = max(2, int(config.get("settings", "history_turns", fallback="").strip().strip('"') or 12))
