@@ -135,6 +135,7 @@ TOOL_STYLES = {
     "set_github_status": "bright_white",
     "clear_github_status": "bright_white",
     "list_folder": "bright_yellow",
+    "search_images": "bright_yellow",
     "read_file": "bright_yellow",
     "write_file": "bright_yellow",
     "get_holidays": "bright_cyan",

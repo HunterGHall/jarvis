@@ -110,6 +110,7 @@ from sun_moon import get_sun_and_moon
 from system_specifications import get_system_specifications
 from system_status import get_system_status
 from terminal import run_bash
+from web_images import search_images
 from timer import cancel_timer, list_timers, set_timer
 from google_tools import FUNCTIONS as GOOGLE_FUNCTIONS, NOTE as GOOGLE_NOTE, TOOLS as GOOGLE_TOOLS, google_ready
 
@@ -120,6 +121,7 @@ if google_ready():
     voice_content += GOOGLE_NOTE
 
 UTILITY_FUNCTIONS = {
+    "search_images": search_images,
     "get_github_status": get_github_status,
     "set_github_status": set_github_status,
     "clear_github_status": clear_github_status,
@@ -196,6 +198,18 @@ _FILE_PATH = (
 )
 
 UTILITY_TOOLS = [
+    {
+        "name": "search_images",
+        "description": "Find pictures on the web that are free to reuse (Wikimedia Commons, then Openverse), each with a direct image link, size, and the credit its license asks to be shown. Use it to find a picture to put in a Google Doc, Sheet, or Slides deck; pass the image url to docs_insert_image, sheets_insert_image, or slides_insert_image, and the credit as the caption (Docs and Slides). Works for subjects, places, animals, and public figures, but not for brand logos or recent news photos.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "query": {"type": "string", "description": "What the picture should show."},
+                "limit": {"type": "integer", "description": "How many to return, up to 10. Defaults to 5."},
+            },
+            "required": ["query"],
+        },
+    },
     {
         "name": "get_github_status",
         "description": "Check what status (emoji and message) is currently shown on the user's GitHub profile.",
