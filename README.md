@@ -41,6 +41,7 @@ Jarvis can call these tools on its own whenever a question needs them, and the C
 - Look inside any folder (optionally including its subfolders) and create folders with files already in them
 - Set the speaker volume to an exact percentage, or mute it
 - Run terminal commands in PowerShell, with your approval for every command
+- Set, check, and clear your GitHub profile status, optionally clearing itself after a while ("Coding" for two hours)
 
 **Tools**
 - Calculator and unit conversion
@@ -89,6 +90,9 @@ Jarvis can search, move, copy, rename, and delete files anywhere on your compute
    [settings]
    show_cost = False
    history_turns = 12
+
+   [github]
+   token =
    ```
 
    - `model` is the Claude model Jarvis uses.
@@ -96,6 +100,7 @@ Jarvis can search, move, copy, rename, and delete files anywhere on your compute
    - `zip_code` is your default location for weather, air quality, sun times, and local news.
    - `show_cost = True` shows the token usage and cost of each reply, including how many input tokens came from the prompt cache.
    - `history_turns` is how many of your recent messages (with Jarvis's replies) are remembered and re-sent with each new one. Older ones are dropped in chunks, since the whole conversation is sent every time. The default is 12.
+   - `[github] token` is optional and only needed to change your GitHub status. Create a classic personal access token at github.com/settings/tokens with the `user` scope. It's read from `config.conf` (which is gitignored) and never printed or sent anywhere except to GitHub.
 
 3. Run it:
 
