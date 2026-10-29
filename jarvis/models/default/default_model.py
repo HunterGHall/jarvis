@@ -111,6 +111,13 @@ from system_specifications import get_system_specifications
 from system_status import get_system_status
 from terminal import run_bash
 from timer import cancel_timer, list_timers, set_timer
+from google_tools import FUNCTIONS as GOOGLE_FUNCTIONS, NOTE as GOOGLE_NOTE, TOOLS as GOOGLE_TOOLS, google_ready
+
+# The Google tools (Gmail, Calendar, Drive, Docs, Sheets, Slides) are only offered once the one-time setup has been
+# run: python -m jarvis.google_setup
+if google_ready():
+    content += GOOGLE_NOTE
+    voice_content += GOOGLE_NOTE
 
 UTILITY_FUNCTIONS = {
     "get_github_status": get_github_status,
@@ -754,6 +761,10 @@ UTILITY_TOOLS = [
         "input_schema": _NO_INPUT,
     },
 ]
+
+if google_ready():
+    UTILITY_FUNCTIONS.update(GOOGLE_FUNCTIONS)
+    UTILITY_TOOLS += GOOGLE_TOOLS
 
 
 

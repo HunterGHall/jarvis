@@ -163,6 +163,22 @@ TOOL_STYLES = {
 }
 DEFAULT_TOOL_STYLE = ("⚙ ", "bright_magenta")
 
+# The Google tools share an icon per service, picked by the start of the tool's name
+GOOGLE_TOOL_STYLES = {
+    "gmail_": ("✉ ", "red"),
+    "calendar_": ("📅", "bright_blue"),
+    "drive_": ("☁ ", "yellow"),
+    "docs_": ("📝", "bright_blue"),
+    "sheets_": ("📊", "green"),
+    "slides_": ("📽 ", "bright_yellow"),
+}
+
+
+def _tool_style(name):
+    if name in TOOL_STYLES:
+        return TOOL_STYLES[name]
+    return next((style for prefix, style in GOOGLE_TOOL_STYLES.items() if name.startswith(prefix)), DEFAULT_TOOL_STYLE)
+
 
 def _greeting():
     hour = datetime.now().hour
@@ -269,7 +285,7 @@ class _Session:
             self.stop = event
             return
         name = event["name"]
-        icon, color = TOOL_STYLES.get(name, DEFAULT_TOOL_STYLE)
+        icon, color = _tool_style(name)
         if event["type"] == "tool_call":
             self.calls += 1
             self.started[name] = time.perf_counter()
