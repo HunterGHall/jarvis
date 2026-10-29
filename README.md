@@ -129,8 +129,8 @@ Reading mail and documents sends their text to Claude to be understood, like any
 Type a message at the `>` prompt and Jarvis replies. Type `exit` or press Ctrl+C to quit.
 
 ```
-  🔍 web_search  query="latest Python release"  [server]
-  ⚙  get_time    [local]
+  • web_search  query="latest Python release"  [server]
+  • get_time    [local]
      ╰─ ✓ 0.0s  "9:18:55 PM"
 ┌─ JARVIS ─────────────────────────────────────────────────┐
 │  It's 9:18 PM, sir. The latest Python release is 3.15.2. │
