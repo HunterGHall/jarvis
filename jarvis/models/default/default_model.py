@@ -976,7 +976,7 @@ TOOLS[-1] = {**TOOLS[-1], "cache_control": CACHE}
 def _create_message(messages, voice=False):
     return client.messages.create(
         model=model_version,
-        max_tokens=4096,
+        max_tokens=20000,
         # Prompt caching: the tools, the system prompt, and the conversation so far are mostly identical from one
         # request to the next, so they're read back from the cache at a tenth of the price
         system=[{"type": "text", "text": voice_content if voice else content, "cache_control": CACHE}],
