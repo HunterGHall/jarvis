@@ -42,6 +42,7 @@ Jarvis can call these tools on its own whenever a question needs them, and the C
 - Set the speaker volume to an exact percentage, or mute it
 - Run terminal commands in PowerShell, with your approval for every command
 - Set, check, and clear your GitHub profile status, optionally clearing itself after a while ("Coding" for two hours)
+- Your Google account (optional, one-time setup): read, search, draft, and send Gmail; read and manage Calendar events; search, read, upload, organize, and share Drive files; read and write Docs, Sheets, and Slides
 
 **Tools**
 - Calculator and unit conversion
@@ -107,6 +108,21 @@ Jarvis can search, move, copy, rename, and delete files anywhere on your compute
    ```
    python main.py
    ```
+
+## Google (Gmail, Calendar, Drive, Docs, Sheets, Slides)
+
+Optional. Jarvis signs in as you, so it can reach your own mail, calendar, and files without anything being shared with a bot account, and you never have to share a document with it. The setup is done once:
+
+1. Run `python -m jarvis.google_setup`. With no credentials file yet, it prints the steps below with your links.
+2. In [Google Cloud](https://console.cloud.google.com/projectcreate), create a project and turn on the six APIs (the setup output has a single link that enables them all).
+3. Under "OAuth consent screen", choose External, add your own Google account as a test user, then press **Publish app**. Without that, the sign-in expires every 7 days. Google will call the app unverified; since it's your own, choose Advanced, then "Go to Jarvis".
+4. Under "Credentials", create an **OAuth client ID** of type **Desktop app** and download the JSON.
+5. Run `python -m jarvis.google_setup "path\to\that\file.json"`. A browser tab opens; approve every permission. It then checks each service and tells you if one still needs its API switched on.
+6. Restart Jarvis. The Google tools only appear once setup is done.
+
+Your credentials and sign-in are saved as `google_credentials.json` and `google_token.json` in the project folder, both gitignored. They stay on your machine and go only to Google.
+
+Reading mail and documents sends their text to Claude to be understood, like any other file Jarvis reads. Anything that reaches other people or can't be undone easily asks first, with the full details shown (or spoken, in voice mode): sending an email, inviting people to an event, deleting an event, trashing a file or an email, sharing a file, and overwriting cells in a sheet. Text found inside emails and documents is treated as data, not as instructions.
 
 ## Using it
 
