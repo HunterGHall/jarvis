@@ -821,6 +821,38 @@ def _trim_history(history):
     return [message for message in trimmed if message["content"]]
 
 
+def _first_unpaired_tool_call(history):
+    """Index of the first message whose tool calls and tool results don't line up, or None if they all do."""
+    for i, message in enumerate(history):
+        if not isinstance(message["content"], list):
+            continue
+        if message["role"] == "assistant":
+            wanted = {b["id"] for b in message["content"] if b.get("type") == "tool_use"}
+            following = history[i + 1]["content"] if i + 1 < len(history) else None
+            answered = {b.get("tool_use_id") for b in following if b.get("type") == "tool_result"} if isinstance(following, list) else set()
+            if wanted - answered:
+                return i
+        else:
+            answers = {b.get("tool_use_id") for b in message["content"] if b.get("type") == "tool_result"}
+            previous = history[i - 1]["content"] if i > 0 else None
+            asked = {b["id"] for b in previous if b.get("type") == "tool_use"} if isinstance(previous, list) and history[i - 1]["role"] == "assistant" else set()
+            if answers - asked:
+                return i
+    return None
+
+
+def _heal_history(history):
+    """Drops any exchange whose tool calls never got their results.
+
+    The API refuses a conversation with a tool call that has no matching result, and it refuses it on every later
+    message, so one broken exchange left in the saved file would block every message after it.
+    """
+    while (broken := _first_unpaired_tool_call(history)) is not None:
+        start = max((i for i in range(broken + 1) if history[i]["role"] == "user" and isinstance(history[i]["content"], str)), default=0)
+        history = history[:start]
+    return history
+
+
 def _run_utility(name, tool_input):
     function = UTILITY_FUNCTIONS.get(name)
     if function is None:
@@ -856,7 +888,7 @@ def _emit_server_tools(message, emit):
 def send_message(user_input, conversation_id="default", on_event=None, voice=False):
     # on_event gets a dict per tool call/result so a front end can show what the model is doing
     emit = on_event or (lambda _: None)
-    history = _trim_history(load_history(conversation_id))
+    history = _trim_history(_heal_history(load_history(conversation_id)))
     history.append({"role": "user", "content": user_input})
 
     # Tool turns are kept in history so later turns can see what was actually looked up
@@ -899,6 +931,16 @@ def send_message(user_input, conversation_id="default", on_event=None, voice=Fal
                 result["toolset_name"] = toolset
             results.append(result)
         messages.append({"role": "user", "content": results})
+
+    # If the model stopped for any reason other than "tool_use" (running out of room, a refusal) its last message may
+    # still hold tool calls that will never get results. Saved as they are, they'd make every later request fail.
+    last = messages[-1]
+    if last["role"] == "assistant" and any(block.get("type") == "tool_use" for block in last["content"]):
+        kept = [block for block in last["content"] if block.get("type") not in {"tool_use", "thinking", "redacted_thinking"}]
+        if kept:
+            last["content"] = kept
+        else:
+            messages.pop()
 
     save_history(conversation_id, history)
     details = getattr(message, "stop_details", None)
