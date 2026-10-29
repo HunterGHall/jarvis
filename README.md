@@ -96,18 +96,90 @@ Jarvis can search, move, copy, rename, and delete files anywhere on your compute
    token =
    ```
 
-   - `model` is the Claude model Jarvis uses.
-   - `name` is how Jarvis addresses you.
-   - `zip_code` is your default location for weather, air quality, sun times, and local news.
-   - `show_cost = True` shows the token usage and cost of each reply, including how many input tokens came from the prompt cache.
-   - `history_turns` is how many of your recent messages (with Jarvis's replies) are remembered and re-sent with each new one. Older ones are dropped in chunks, since the whole conversation is sent every time. The default is 12.
-   - `[github] token` is optional and only needed to change your GitHub status. Create a classic personal access token at github.com/settings/tokens with the `user` scope. It's read from `config.conf` (which is gitignored) and never printed or sent anywhere except to GitHub.
+   Every setting is explained in [Configuration](#configuration) below.
 
 3. Run it:
 
    ```
    python main.py
    ```
+
+## Configuration
+
+All settings live in `config.conf` in the project folder. It is created the first time you run Jarvis and is gitignored, so your keys stay on your machine. Edit it in any text editor and restart Jarvis to apply changes. A missing or blank setting uses its default. (Voice settings can also be changed while Jarvis is running; see below.)
+
+### `[anthropic]`
+
+| Setting | Default | What it does |
+|---|---|---|
+| `anthropic_api_key` | none (required) | Your Claude API key. |
+| `model` | `claude-sonnet-5-5` if missing; the first-run file uses `claude-haiku-5-5` | Which Claude model Jarvis uses. Haiku is the cheapest and fastest; larger models reason better and cost more. |
+
+### `[personal]`
+
+| Setting | Default | What it does |
+|---|---|---|
+| `name` | none | How Jarvis knows you. It is told your name, and addresses you as "sir". |
+| `zip_code` | none | Your US zip code, the default place for weather, forecasts, air quality, sunrise and sunset, local news, and earthquakes near you. |
+
+### `[settings]`
+
+| Setting | Default | What it does |
+|---|---|---|
+| `show_cost` | `False` | `True` shows what each reply cost: input and output tokens with their price, how many input tokens came from the prompt cache, and the number of web searches. |
+| `history_turns` | `12` | How many of your recent messages (with Jarvis's replies) it remembers and re-sends with each new one. Once the history reaches half again as many (18 by default), the oldest are dropped in one go. Lower is cheaper; higher remembers further back. The minimum is 2. |
+
+### `[github]`
+
+| Setting | Default | What it does |
+|---|---|---|
+| `token` | none | Optional. Lets Jarvis set, check, and clear your GitHub status. Create a *classic* personal access token at github.com/settings/tokens with the `user` scope. It is only ever sent to GitHub. |
+
+### `[voice]`
+
+Nothing here is needed to start; every setting has a default. Change them live in Jarvis, or write them in this section:
+
+| Command | What it does |
+|---|---|
+| `/voice settings` | Lists every voice setting with its current value and a description. |
+| `/voice set <name> <value>` | Changes a setting immediately and saves it to `config.conf`, for example `/voice set speed 1.1`. |
+| `/voice voices` | Lists the available voices. |
+| `/voice test [text]` | Speaks a sample, so you can hear a change. |
+
+| Setting | Default | What it does |
+|---|---|---|
+| `voice` | `jar` | Which voice to speak in (see below). |
+| `num_step` | `45` | Refinement passes, 1 to 128. Higher sounds cleaner but is slower; 16 to 24 is a good trade if speech is slow to start. |
+| `speed` | `1.0` | Speaking pace, 0.25 to 4. |
+| `effect_preset` | `broadcast` | Sound polish that evens out volume: `broadcast`, `podcast`, `warm`, `cinematic`, `raw`, and others. |
+| `instruct` | blank | A style hint, such as "calm, warm British butler". |
+| `seed` | blank | A number makes the delivery repeatable; blank is random each time. |
+| `language` | blank | A language code such as `en`; blank detects it. |
+| `silence` | `0.8` | Seconds of quiet that end your turn while you are talking to Jarvis. |
+| `guidance_scale` | `2.0` | How closely speech follows the voice prompt, 0 to 20. |
+| `t_shift` | `0.10` | Refinement timing. |
+| `position_temperature` | `5.0` | Variation in the order sounds are generated. |
+| `class_temperature` | `0.0` | Variation in the sound itself. |
+| `layer_penalty_factor` | `5.0` | Balance between coarse and fine detail. |
+| `denoise` | `true` | Cleans background noise out of the reference voice. |
+| `postprocess_output` | `true` | Polishes the generated audio. |
+| `preload` | `true` | Loads the speech and listening models when Jarvis starts, so voice is ready right away. `false` starts faster but the first voice use is slow. |
+| `whisper_model` | `base.en` | The speech-to-text model that hears you. A larger one is more accurate and slower. |
+| `max_chunk` | `120` | Characters spoken per request. Smaller starts speaking sooner. |
+| `max_prebuffer` | `10` | The longest wait, in seconds, before playback starts. |
+
+The built-in defaults are listed in `OPTIONS` at the top of `jarvis/voice.py`.
+
+**Voices** live in `jarvis/assets`. A voice is either a `<name>.pt` file, or a `<name>.mp3` clip of 3 to 10 seconds with a `<name>.txt` holding exactly what is said in it. Select one with `/voice set voice <name>`.
+
+### Other files
+
+| File | What it is |
+|---|---|
+| `google_credentials.json`, `google_token.json` | Your Google sign-in, created by `python -m jarvis.google_setup`. Gitignored. |
+| `jarvis/models/training_data/jarvis.txt` | The personality and style Jarvis uses when you type. |
+| `jarvis/models/training_data/jarvis-voice.txt` | The same, for voice mode, written for short spoken answers. |
+| `jarvis/models/conversations/` | Your saved conversation. Gitignored. |
 
 ## Google (Gmail, Calendar, Drive, Docs, Sheets, Slides)
 
