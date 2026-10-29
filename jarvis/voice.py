@@ -11,7 +11,7 @@ import numpy as np
 import sounddevice as sd
 
 from jarvis import tts
-from jarvis.models.default.default_model import CONFIG_PATH
+from jarvis.paths import CONFIG_PATH
 
 SAMPLE_RATE = 16000
 BLOCK = 480  # 30 ms
@@ -41,7 +41,7 @@ def _bool(text):
 # Voice settings used for every speech request; change them live with `/voice set <name> <value>`.
 # name: (default, type, what it does). Defaults give the original-quality cloned voice with polish on.
 OPTIONS = {
-    "voice": ("jar", str, "voice name (a .pt or .mp3 + .txt in jarvis/assets)"),
+    "voice": ("jar", str, "voice name (a bundled one, or a .pt or .mp3 + .txt in your voices folder)"),
     "num_step": ("45", int, "voice refinement passes, 1-128 (more is higher quality but slower)"),
     "guidance_scale": ("2.0", float, "prompt guidance, 0-20"),
     "t_shift": ("0.10", float, "refinement timing"),

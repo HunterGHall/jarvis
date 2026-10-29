@@ -4,9 +4,9 @@ import urllib.error
 import urllib.request
 from configparser import ConfigParser
 from datetime import datetime, timedelta, timezone
-from pathlib import Path
 
-CONFIG_PATH = Path(__file__).resolve().parents[4] / "config.conf"
+from jarvis.paths import CONFIG_PATH
+
 API_URL = "https://api.github.com/graphql"
 MAX_MESSAGE_CHARS = 80  # GitHub's limit for a status message
 

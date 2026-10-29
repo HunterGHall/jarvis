@@ -6,32 +6,17 @@ import time
 from configparser import ConfigParser
 from pathlib import Path
 
-# Resolve paths relative to this file, not the working directory
-MODELS_DIR = Path(__file__).resolve().parent.parent
-ROOT_DIR = MODELS_DIR.parents[1]
-CONVERSATIONS_DIR = MODELS_DIR / "conversations"
-CONVERSATIONS_DIR.mkdir(exist_ok=True)
+from jarvis.first_run import render
+from jarvis.paths import CONFIG_PATH, CONVERSATIONS_DIR
 
-# Create a config template on first run, since the real one is gitignored
-CONFIG_PATH = ROOT_DIR / "config.conf"
+# The prompts and tools live next to this file; your own files (config, conversation) are found by jarvis.paths
+MODELS_DIR = Path(__file__).resolve().parent.parent
+CONVERSATIONS_DIR.mkdir(parents=True, exist_ok=True)
+
+# Normally `jarvis` has already asked for your details (see launch.py). This is the fallback when there is nobody to ask.
 if not CONFIG_PATH.exists():
-    CONFIG_PATH.write_text(
-        "[anthropic]\n"
-        "anthropic_api_key = YOUR_KEY\n"
-        "model = claude-haiku-5-5\n"
-        "\n"
-        "[personal]\n"
-        "name = YOUR_NAME\n"
-        "zip_code = YOUR_ZIP\n"
-        "\n"
-        "[settings]\n"
-        "show_cost = False\n"
-        "\n"
-        "# Optional: a classic GitHub personal access token with the 'user' scope, to change your GitHub status\n"
-        "[github]\n"
-        "token =\n",
-        encoding="utf-8",
-    )
+    CONFIG_PATH.parent.mkdir(parents=True, exist_ok=True)
+    CONFIG_PATH.write_text(render(), encoding="utf-8")
     sys.exit(f"Created {CONFIG_PATH}. Fill in your details and run again.")
 
 # Get API key and model version
@@ -117,7 +102,7 @@ from timer import cancel_timer, list_timers, set_timer
 from google_tools import FUNCTIONS as GOOGLE_FUNCTIONS, NOTE as GOOGLE_NOTE, TOOLS as GOOGLE_TOOLS, google_ready
 
 # The Google tools (Gmail, Calendar, Drive, Docs, Sheets, Slides) are only offered once the one-time setup has been
-# run: python -m jarvis.google_setup
+# run: jarvis google-setup
 if google_ready():
     content += GOOGLE_NOTE
     voice_content += GOOGLE_NOTE

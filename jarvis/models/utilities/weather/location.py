@@ -2,9 +2,9 @@ import configparser
 import json
 import urllib.error
 import urllib.request
-from pathlib import Path
 
-CONFIG_PATH = Path(__file__).resolve().parents[4] / "config.conf"
+from jarvis.paths import CONFIG_PATH
+
 
 
 def get_zip_code():
