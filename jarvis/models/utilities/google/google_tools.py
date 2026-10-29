@@ -1,13 +1,13 @@
 """The Google tools as the model sees them: the functions, and their descriptions. Only offered once Google is set up."""
 from google_auth import is_ready
 from google_calendar import calendar_create_event, calendar_delete_event, calendar_list_events, calendar_update_event
-from google_docs import docs_append, docs_create, docs_read, docs_replace_text
+from google_docs import docs_append, docs_create, docs_insert_image, docs_read, docs_replace_text
 from google_drive import (
     drive_create_folder, drive_list_folder, drive_read, drive_search, drive_share, drive_trash, drive_update, drive_upload_text,
 )
 from google_gmail import gmail_create_draft, gmail_read, gmail_search, gmail_send, gmail_trash
-from google_sheets import sheets_append_rows, sheets_create, sheets_read, sheets_update_range
-from google_slides import slides_add_slide, slides_create, slides_read
+from google_sheets import sheets_append_rows, sheets_create, sheets_insert_image, sheets_read, sheets_update_range
+from google_slides import slides_add_slide, slides_create, slides_insert_image, slides_read
 
 
 def google_ready():
@@ -41,9 +41,9 @@ FUNCTIONS = {
         gmail_search, gmail_read, gmail_send, gmail_create_draft, gmail_trash,
         calendar_list_events, calendar_create_event, calendar_update_event, calendar_delete_event,
         drive_search, drive_list_folder, drive_read, drive_create_folder, drive_upload_text, drive_update, drive_trash, drive_share,
-        docs_read, docs_create, docs_append, docs_replace_text,
-        sheets_read, sheets_create, sheets_append_rows, sheets_update_range,
-        slides_read, slides_create, slides_add_slide,
+        docs_read, docs_create, docs_append, docs_replace_text, docs_insert_image,
+        sheets_read, sheets_create, sheets_append_rows, sheets_update_range, sheets_insert_image,
+        slides_read, slides_create, slides_add_slide, slides_insert_image,
     )
 }
 
@@ -96,6 +96,11 @@ TOOLS = [
     _tool("docs_replace_text", "Replace every occurrence of some text in a Google Doc.",
           {"document": _ID, "find": {"type": "string"}, "replace": {"type": "string"}, "match_case": {"type": "boolean"}}, ["document", "find", "replace"]),
 
+    _tool("docs_insert_image", "Put a picture from the web into a Google Doc, at the end or right after some text. image_url must be the direct link to a PNG, JPEG or GIF file that anyone can open, such as one from search_images (or a link the user gives). If the picture came from search_images, pass its credit as the caption.",
+          {"document": _ID, "image_url": {"type": "string"}, "width_inches": {"type": "number", "description": "Up to 6.5. Defaults to 5."},
+           "after_text": {"type": "string", "description": "Put the picture right after the first place this text appears. Leave out to add it at the end."},
+           "caption": {"type": "string", "description": "Text shown under the picture, such as its credit."}}, ["document", "image_url"]),
+
     _tool("sheets_read", "Read cells from a Google Sheet. Without a range it lists the tabs and shows the top of the first one. Ranges look like 'Budget!A1:D20'.",
           {"spreadsheet": _ID, "range": {"type": "string"}}, ["spreadsheet"]),
     _tool("sheets_create", "Create a new Google Sheet, optionally filled with rows (a list of rows, each a list of cells).",
@@ -105,11 +110,21 @@ TOOLS = [
     _tool("sheets_update_range", "Overwrite a block of cells in a Google Sheet. The user must approve because it replaces what's there.",
           {"spreadsheet": _ID, "range": {"type": "string", "description": "Like Sheet1!A1:C3."}, "values": {"type": "array", "items": {"type": "array", "items": {}}}}, ["spreadsheet", "range", "values"]),
 
+    _tool("sheets_insert_image", "Show a picture from the web inside one cell of a Google Sheet, and enlarge that cell so it can be seen. image_url must be the direct link to an image file that anyone can open, such as one from search_images. Replacing a cell that already has something in it needs the user's approval.",
+          {"spreadsheet": _ID, "cell": {"type": "string", "description": "Like B3, or Sheet1!B3."}, "image_url": {"type": "string"},
+           "tab": {"type": "string", "description": "Which tab, if the cell doesn't say. Defaults to the first."},
+           "size_px": {"type": "integer", "description": "Make the cell's row and column this many pixels, so the picture is visible. Defaults to 150; 0 leaves the size alone."}}, ["spreadsheet", "cell", "image_url"]),
+
     _tool("slides_read", "Read the text and speaker notes of each slide in a Google Slides presentation.", {"presentation": _ID}, ["presentation"]),
     _tool("slides_create", "Create a Google Slides presentation with a title-and-body slide for each entry in `slides`.",
           {"title": {"type": "string"}, "slides": {"type": "array", "items": {"type": "object", "properties": {"title": {"type": "string"}, "body": {"type": "string", "description": "Lines become bullet points."}}}}}, ["title"]),
-    _tool("slides_add_slide", "Add a title-and-body slide to a Google Slides presentation.",
-          {"presentation": _ID, "title": {"type": "string"}, "body": {"type": "string"}, "position": {"type": "integer", "description": "Where it goes, counting from 1. Defaults to the end."}}, ["presentation", "title"]),
+    _tool("slides_add_slide", "Add a slide to a Google Slides presentation. Use layout 'title_only' for a slide that is mainly a picture (add the picture afterwards with slides_insert_image); the default 'title_and_body' has bullet text.",
+          {"presentation": _ID, "title": {"type": "string"}, "body": {"type": "string"}, "position": {"type": "integer", "description": "Where it goes, counting from 1. Defaults to the end."},
+           "layout": {"type": "string", "enum": ["title_and_body", "title_only"]}}, ["presentation", "title"]),
+    _tool("slides_insert_image", "Put a picture from the web on a Google Slides slide, scaled to fit without distortion. image_url must be the direct link to a PNG, JPEG or GIF file that anyone can open, such as one from search_images (or a link the user gives). Use position 'center' or 'full' for a picture-only slide, and 'right' or 'left' on a slide that has text. If the picture came from search_images, pass its credit as the caption.",
+          {"presentation": _ID, "image_url": {"type": "string"}, "slide": {"type": "integer", "description": "Slide number, counting from 1. Defaults to the last slide."},
+           "position": {"type": "string", "enum": ["center", "right", "left", "full"], "description": "Defaults to center."},
+           "caption": {"type": "string", "description": "Small text under the picture, such as its credit."}}, ["presentation", "image_url"]),
 ]
 
 assert set(FUNCTIONS) == {tool["name"] for tool in TOOLS}, "every Google tool needs both a function and a description"

@@ -1,7 +1,9 @@
+import re
 import urllib.parse
 
-from google_auth import api
+from google_auth import GoogleError, api
 from google_common import approve, declined, extract_id, safe
+from web_images import ImageError, check_image
 
 BASE = "https://sheets.googleapis.com/v4/spreadsheets"
 MAX_ROWS = 200
@@ -82,3 +84,68 @@ def sheets_update_range(spreadsheet, range, values):
         return declined()
     reply = api("PUT", f"{BASE}/{spreadsheet_id}/values/{_range(range)}", params={"valueInputOption": "USER_ENTERED"}, body={"values": values})
     return {"updated_cells": reply.get("updatedCells"), "range": reply.get("updatedRange"), "link": _url(spreadsheet_id)}
+
+
+def _cell_position(cell):
+    """(tab or None, column index, row index) from a reference like 'B3' or 'Sheet1!B3'."""
+    tab, _, reference = cell.rpartition("!")
+    match = re.fullmatch(r"\$?([A-Za-z]{1,3})\$?(\d+)", reference.strip())
+    if not match:
+        raise GoogleError(f"'{cell}' isn't a single cell like B3 or Sheet1!B3.")
+    column = 0
+    for letter in match.group(1).upper():
+        column = column * 26 + (ord(letter) - 64)
+    return tab.strip("'").replace("''", "'") or None, column - 1, int(match.group(2)) - 1
+
+
+def _column_letters(index):
+    letters, number = "", index + 1
+    while number:
+        number, remainder = divmod(number - 1, 26)
+        letters = chr(65 + remainder) + letters
+    return letters
+
+
+def _resize(sheet_id, dimension, index, pixels):
+    return {
+        "updateDimensionProperties": {
+            "range": {"sheetId": sheet_id, "dimension": dimension, "startIndex": index, "endIndex": index + 1},
+            "properties": {"pixelSize": pixels},
+            "fields": "pixelSize",
+        }
+    }
+
+
+@safe
+def sheets_insert_image(spreadsheet, cell, image_url, tab=None, size_px=150):
+    """Shows a picture from the web inside one cell of a Google Sheet (with =IMAGE), and makes that cell big enough to see it."""
+    try:
+        check_image(image_url)
+    except ImageError as error:
+        return {"error": str(error)}
+    spreadsheet_id = extract_id(spreadsheet)
+    cell_tab, column, row = _cell_position(cell)
+    info = api("GET", f"{BASE}/{spreadsheet_id}", params={"fields": "sheets.properties(sheetId,title)"})
+    tabs = [sheet["properties"] for sheet in info.get("sheets", [])]
+    wanted = cell_tab or tab or (tabs[0]["title"] if tabs else "")
+    target = next((t for t in tabs if t["title"].lower() == wanted.lower()), None)
+    if target is None:
+        return {"error": f"There's no tab called '{wanted}'. Tabs: {', '.join(t['title'] for t in tabs)}."}
+
+    where = f"{_column_letters(column)}{row + 1}"
+    reference = f"{_quote_tab(target['title'])}!{where}"
+    existing = api("GET", f"{BASE}/{spreadsheet_id}/values/{_range(reference)}").get("values", [[]])
+    current = str(existing[0][0]) if existing and existing[0] else ""
+    if current and not approve(
+        f"Replace what's in {reference} with a picture?\n\n    Now: {current[:80]}\n",
+        f"Shall I replace what's in cell {where} with a picture?",
+    ):
+        return declined()
+
+    formula = '=IMAGE("' + image_url.replace('"', "%22") + '")'
+    api("PUT", f"{BASE}/{spreadsheet_id}/values/{_range(reference)}", params={"valueInputOption": "USER_ENTERED"}, body={"values": [[formula]]})
+    if size_px:
+        pixels = max(20, min(int(size_px), 1000))
+        requests = [_resize(target["sheetId"], "ROWS", row, pixels), _resize(target["sheetId"], "COLUMNS", column, pixels)]
+        api("POST", f"{BASE}/{spreadsheet_id}:batchUpdate", body={"requests": requests})
+    return {"inserted": True, "cell": reference, "resized_to_px": size_px or None, "link": _url(spreadsheet_id)}
