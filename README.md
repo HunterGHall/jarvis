@@ -127,6 +127,7 @@ All settings live in `config.conf` in the project folder. It is created the firs
 | Setting | Default | What it does |
 |---|---|---|
 | `show_cost` | `False` | `True` shows what each reply cost: input and output tokens with their price, how many input tokens came from the prompt cache, and the number of web searches. |
+| `auto_resize` | `True` | Redraws the screen at the new width when you resize the window, so panels don't fall apart. `False` turns it off. |
 | `history_turns` | `12` | How many of your recent messages (with Jarvis's replies) it remembers and re-sends with each new one. Once the history reaches half again as many (18 by default), the oldest are dropped in one go. Lower is cheaper; higher remembers further back. The minimum is 2. |
 
 ### `[github]`
@@ -213,6 +214,7 @@ Type a message at the `>` prompt and Jarvis replies. Type `exit` or press Ctrl+C
 
 - Every tool call and web search is shown as it runs, with its arguments, how long it took, and a preview of the result.
 - With `show_cost = True`, a line under each reply shows input and output tokens with their cost, plus any web searches (billed per search, on top of the token cost).
+- Resize the window whenever you like. Once you stop dragging, Jarvis clears the screen and redraws the whole conversation at the new width. It waits if you have started typing, and if a reply is being written it redraws just before the next prompt, so it never cuts into either. This does clear the terminal's scrollback, and it remembers the last 400 things it printed. Turn it off with `auto_resize = False`.
 - Conversations are saved in `jarvis/models/conversations/`.
 
 Some things to try:
