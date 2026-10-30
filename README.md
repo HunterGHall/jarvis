@@ -104,9 +104,41 @@ Jarvis can search, move, copy, rename, and delete files anywhere on your compute
    python main.py
    ```
 
+## Desktop app (Windows)
+
+Jarvis also runs as a normal window, built with Electron (HTML, CSS, and JavaScript in `app/renderer`). It talks to the same Python code through `jarvis/server.py`, so every tool, your `config.conf`, and your saved conversation work the same way as in the terminal. Deleting files and running terminal commands ask for approval in a dialog.
+
+1. Install [Node.js](https://nodejs.org), then set up and build:
+
+   ```
+   cd app
+   npm install
+   npm run build
+   ```
+
+2. Run `app\dist\jarvis.exe`. For development, `npm start` in `app` opens the window without building.
+
+The `.exe` is the window only. It starts Python in the project folder, so it has to stay inside the project (it looks for `jarvis/server.py` next to itself and in the folders above), and the Python requirements above still need to be installed. Set `JARVIS_HOME` to the project folder or `JARVIS_PYTHON` to a Python path if it can't find them.
+
+The window is just two things: the Jarvis ring (`app/renderer/core.js`) and the console beside it. In the middle of the ring is a visualizer: at rest its rings turn and a slow wave runs around the bars, and while Jarvis speaks aloud it draws the spectrum of the actual audio (the voice code reports levels to the window). It also ripples while it listens and pulses while it thinks. When a tool runs, a shockwave leaves the logo, a lane of the ring lights up in the tool's color with a comet running along it, and the tool is listed inside the circle; when it ends, the lane flashes green (or red) and fades.
+
+**Modes.** The four buttons above the console choose how you and Jarvis talk:
+
+| Mode | You | Jarvis |
+|---|---|---|
+| Text | type | types back |
+| Dictate | speak | types back |
+| Read aloud | type | speaks back |
+| Voice | speak | speaks back |
+
+In Dictate and Voice there is no button: Jarvis listens by itself (also at start-up, if that is the mode you left it in) and only reacts after it hears its name, every time: "Jarvis, what's the weather?", or just "Jarvis" and then your request. After it answers it goes straight back to sleep. If you would rather not repeat the name, set `wake_mode` to `stay_awake` in the voice settings: after the name it then keeps the conversation going without it until you have said nothing for 45 seconds (`idle_timeout`, counted from the end of its last answer), and then it needs the name again. Saying "stop listening" also puts it to sleep. The wake word itself, and how sensitive the microphone is (`mic_threshold` and `noise_margin`; lower hears softer voices), are in the voice settings too, and setting the wake word to `none` makes it always listen. Switching to a typing mode turns the microphone off. Speaking needs a Fish Audio key. Listening loads its model the first time, so it takes a few seconds to start. The choice of mode is remembered in `config.conf`.
+
+**Settings.** The gear in the console opens the settings page: light or dark theme, the mode, your Anthropic, Fish Audio and GitHub keys (shown only as "saved, ends in ...", never in full), the model, your name and zip code, how many messages are remembered, whether to show the cost under replies, and every voice setting, with a button to test the voice. Changes are written to `config.conf` and take effect straight away, no restart. On a first run with no key, the settings page opens by itself.
+
+
 ## Configuration
 
-All settings live in `config.conf` in the project folder. It is created the first time you run Jarvis and is gitignored, so your keys stay on your machine. Edit it in any text editor and restart Jarvis to apply changes. A missing or blank setting uses its default. (Voice settings can also be changed while Jarvis is running; see below.)
+All settings live in `config.conf` in the project folder. It is created the first time you run Jarvis and is gitignored, so your keys stay on your machine. Edit it in any text editor and restart Jarvis to apply changes, or change it from the desktop app's settings page, which applies changes immediately. A missing or blank setting uses its default.
 
 ### `[anthropic]`
 
