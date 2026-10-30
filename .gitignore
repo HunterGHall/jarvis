@@ -4,3 +4,5 @@ __pycache__/
 jarvis/models/conversations/
 google_credentials.json
 google_token.json
+/app/node_modules/
+/app/dist/
