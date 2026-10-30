@@ -136,42 +136,40 @@ All settings live in `config.conf` in the project folder. It is created the firs
 |---|---|---|
 | `token` | none | Optional. Lets Jarvis set, check, and clear your GitHub status. Create a *classic* personal access token at github.com/settings/tokens with the `user` scope. It is only ever sent to GitHub. |
 
+### `[fish]`
+
+| Setting | Default | What it does |
+|---|---|---|
+| `api_key` | none | Needed for Jarvis to speak. Get a key at fish.audio. Speech is made by Fish Audio's service, so each sentence Jarvis speaks is sent to them. It is only ever sent there. |
+
 ### `[voice]`
 
-Nothing here is needed to start; every setting has a default. Change them live in Jarvis, or write them in this section:
+Listening happens on your PC (faster-whisper); speaking goes through Fish Audio. Nothing here is needed to start; every setting has a default. Change them live in Jarvis, or write them in this section:
 
 | Command | What it does |
 |---|---|
 | `/voice settings` | Lists every voice setting with its current value and a description. |
 | `/voice set <name> <value>` | Changes a setting immediately and saves it to `config.conf`, for example `/voice set speed 1.1`. |
-| `/voice voices` | Lists the available voices. |
+| `/voice voices` | Shows the voice model and speech model in use. |
 | `/voice test [text]` | Speaks a sample, so you can hear a change. |
 
 | Setting | Default | What it does |
 |---|---|---|
-| `voice` | `jar` | Which voice to speak in (see below). |
-| `num_step` | `45` | Refinement passes, 1 to 128. Higher sounds cleaner but is slower; 16 to 24 is a good trade if speech is slow to start. |
-| `speed` | `1.0` | Speaking pace, 0.25 to 4. |
-| `effect_preset` | `broadcast` | Sound polish that evens out volume: `broadcast`, `podcast`, `warm`, `cinematic`, `raw`, and others. |
-| `instruct` | blank | A style hint, such as "calm, warm British butler". |
-| `seed` | blank | A number makes the delivery repeatable; blank is random each time. |
-| `language` | blank | A language code such as `en`; blank detects it. |
+| `reference_id` | the Jarvis voice | Which Fish Audio voice model speaks. Copy the id from any voice's page on fish.audio. |
+| `model` | `s2.1-pro-free` | Fish Audio's speech model: `s1`, `s2-pro`, `s2.1-pro`, `s2.1-pro-free`, or `drama-3`. |
+| `speed` | `1.0` | Speaking pace, 0.5 to 2. |
+| `volume` | `0` | Volume change in decibels; positive is louder. |
+| `latency` | `normal` | `normal`, `balanced`, or `low`. Lower starts sooner but may sound rougher. |
+| `temperature` | `0.7` | How much the delivery varies, 0 to 1. |
+| `top_p` | `0.7` | How adventurous the delivery is, 0 to 1. |
+| `normalize` | `true` | Says numbers and symbols as words. |
 | `silence` | `0.8` | Seconds of quiet that end your turn while you are talking to Jarvis. |
-| `guidance_scale` | `2.0` | How closely speech follows the voice prompt, 0 to 20. |
-| `t_shift` | `0.10` | Refinement timing. |
-| `position_temperature` | `5.0` | Variation in the order sounds are generated. |
-| `class_temperature` | `0.0` | Variation in the sound itself. |
-| `layer_penalty_factor` | `5.0` | Balance between coarse and fine detail. |
-| `denoise` | `true` | Cleans background noise out of the reference voice. |
-| `postprocess_output` | `true` | Polishes the generated audio. |
-| `preload` | `true` | Loads the speech and listening models when Jarvis starts, so voice is ready right away. `false` starts faster but the first voice use is slow. |
+| `preload` | `true` | Loads the listening model when Jarvis starts, so voice is ready right away. `false` starts faster but the first voice use is slow. |
 | `whisper_model` | `base.en` | The speech-to-text model that hears you. A larger one is more accurate and slower. |
 | `max_chunk` | `120` | Characters spoken per request. Smaller starts speaking sooner. |
 | `max_prebuffer` | `10` | The longest wait, in seconds, before playback starts. |
 
-The built-in defaults are listed in `OPTIONS` at the top of `jarvis/voice.py`.
-
-**Voices** live in `jarvis/assets`. A voice is either a `<name>.pt` file, or a `<name>.mp3` clip of 3 to 10 seconds with a `<name>.txt` holding exactly what is said in it. Select one with `/voice set voice <name>`.
+The built-in defaults are listed in `OPTIONS` at the top of `jarvis/voice/__init__.py`.
 
 ### Other files
 
@@ -226,6 +224,18 @@ Some things to try:
 - "What can I make with chicken?"
 - "Find my newest PDFs in Downloads and move them into Documents."
 - "Pause the music and turn on Do Not Disturb."
+
+## Voice mode
+
+Talk to Jarvis instead of typing. Start with `python main.py --voice`, or type `/voice` in a running chat.
+
+1. **Listening:** your microphone is heard by faster-whisper, which runs on your PC. Jarvis waits for you to speak, then for a pause (`silence` in `[voice]`).
+2. **Thinking:** the words go to Claude like any typed message, using the shorter spoken-style prompt in `jarvis/models/training_data/jarvis-voice.txt`.
+3. **Speaking:** the reply is cleaned up (no links or code) and sent to Fish Audio, which sends back speech. Playback starts while the rest is still being made.
+
+Say "exit", "stop", or "goodbye" to leave voice mode. Yes/no questions, such as confirming an email, are asked and answered out loud. Setup is a Fish Audio key under `[fish]` and, optionally, the settings under `[voice]` above.
+
+Code lives in `jarvis/voice/`: `__init__.py` does the listening and playback, `tts.py` talks to Fish Audio.
 
 ## Adding a utility
 
