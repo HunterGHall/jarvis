@@ -1,6 +1,6 @@
 <h1 align="center">J.A.R.V.I.S.</h1>
 <p align="center">
-  <em>Just A Rather Very Intelligent System — a personal voice assistant built in Python</em>
+  <em>Just A Rather Very Intelligent System</em>
 </p>
 <p align="center">
   <img src="https://img.shields.io/badge/python-3.10%2B-blue" alt="Python version">
