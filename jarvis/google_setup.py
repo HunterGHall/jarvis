@@ -1,4 +1,4 @@
-"""One-time Google sign-in: jarvis google-setup [path\\to\\downloaded\\credentials.json]"""
+"""One-time Google sign-in: python -m jarvis.google_setup [path\\to\\downloaded\\credentials.json]"""
 import shutil
 import sys
 from pathlib import Path
@@ -32,7 +32,7 @@ Jarvis needs a Google credentials file before you can sign in. This takes about 
        - Application type: Desktop app. Name: Jarvis. Create.
        - Click "Download JSON".
   5. Run this again, with the path to that file:
-       jarvis google-setup "C:\\Users\\you\\Downloads\\client_secret_....json"
+       python -m jarvis.google_setup "C:\\Users\\you\\Downloads\\client_secret_....json"
 
 Nothing is shared with a bot: Jarvis signs in as you, so it can reach whatever you can.
 """
@@ -47,10 +47,9 @@ CHECKS = [
 ]
 
 
-def main(args=None):
-    args = sys.argv[1:] if args is None else args
-    if args:
-        source = Path(args[0].strip('"'))
+def main():
+    if len(sys.argv) > 1:
+        source = Path(sys.argv[1].strip('"'))
         if not source.is_file():
             sys.exit(f"Can't find {source}")
         shutil.copyfile(source, google_auth.CREDENTIALS_PATH)

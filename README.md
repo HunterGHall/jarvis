@@ -71,60 +71,42 @@ Jarvis can search, move, copy, rename, and delete files anywhere on your compute
 
 ## Setup
 
-### Install the `jarvis` command (recommended)
+1. Install Python 3.10 or newer and the dependencies:
 
-This uses [pipx](https://pipx.pypa.io), which installs Jarvis in its own environment and puts a `jarvis` command on your PATH. You need Python 3.10 or newer and Git.
+   ```
+   pip install -r requirements.txt
+   ```
 
-```
-python -m pip install --user pipx
-python -m pipx ensurepath
-```
+2. Run it once to generate `config.conf` (or create it yourself), then add your details:
 
-Open a new PowerShell window (so the PATH change takes effect), then:
+   ```ini
+   [anthropic]
+   anthropic_api_key = YOUR_KEY
+   model = claude-sonnet-5-5
 
-```
-pipx install git+https://github.com/HunterGHall/jarvis
-jarvis
-```
+   [personal]
+   name = YOUR_NAME
+   zip_code = YOUR_ZIP
 
-The first time you run it, Jarvis asks for your Claude API key (create one at https://console.anthropic.com/settings/keys), and optionally your name and zip code. Then you're chatting. Later, `jarvis config` opens your settings.
+   [settings]
+   show_cost = False
+   history_turns = 12
 
-- **Update:** `pipx upgrade jarvis-assistant`
-- **Remove:** `pipx uninstall jarvis-assistant`
-- **Size:** the install is several gigabytes, mostly the voice model's libraries (torch). Voice is part of the main install.
-- **NVIDIA GPU:** by default, Windows installs the CPU build of torch, which makes speech slow. For GPU speech, install with
-  `pipx install git+https://github.com/HunterGHall/jarvis --pip-args="--extra-index-url https://download.pytorch.org/whl/cu128"`
+   [github]
+   token =
+   ```
 
-| Command | What it does |
-|---|---|
-| `jarvis` | Start chatting. |
-| `jarvis --voice` | Start in voice mode. |
-| `jarvis config` | Open your settings file, creating it first if needed. |
-| `jarvis google-setup` | Connect your Google account (see below). |
-| `jarvis --help` | Show these commands. |
+   Every setting is explained in [Configuration](#configuration) below.
 
-### Run from a checkout instead
+3. Run it:
 
-If you'd rather run it from the source folder, for example to change the code:
-
-```
-git clone https://github.com/HunterGHall/jarvis
-cd jarvis
-pip install -r requirements.txt
-python main.py
-```
-
-`python main.py` takes the same options as the `jarvis` command (`python main.py config`, `python main.py --voice`, and so on).
-
-### Where your files go
-
-Your settings, Google sign-in, saved conversation, and any voices you add are kept in `%APPDATA%\Jarvis` (that is, `C:\Users\you\AppData\Roaming\Jarvis`), separate from the program, so updating or reinstalling never touches them. The exceptions: if you run from a checkout that already has a `config.conf` in its folder, that folder is used instead; and setting the `JARVIS_HOME` environment variable picks any folder you like.
-
-Every setting is explained in [Configuration](#configuration) below.
+   ```
+   python main.py
+   ```
 
 ## Configuration
 
-All settings live in `config.conf`, in your Jarvis folder (see [Where your files go](#where-your-files-go)). Jarvis creates it the first time you run it, and `jarvis config` opens it. Your keys stay on your machine; the file is also gitignored if you run from a checkout. Edit it in any text editor and restart Jarvis to apply changes. A missing or blank setting uses its default. (Voice settings can also be changed while Jarvis is running; see below.)
+All settings live in `config.conf` in the project folder. It is created the first time you run Jarvis and is gitignored, so your keys stay on your machine. Edit it in any text editor and restart Jarvis to apply changes. A missing or blank setting uses its default. (Voice settings can also be changed while Jarvis is running; see below.)
 
 ### `[anthropic]`
 
@@ -189,29 +171,29 @@ Nothing here is needed to start; every setting has a default. Change them live i
 
 The built-in defaults are listed in `OPTIONS` at the top of `jarvis/voice.py`.
 
-**Voices** come with Jarvis (`jar`), and you can add your own in the `voices` folder inside your Jarvis folder (`%APPDATA%\Jarvis\voices`). A voice is either a `<name>.pt` file, or a `<name>.mp3` clip of 3 to 10 seconds with a `<name>.txt` holding exactly what is said in it. Select one with `/voice set voice <name>`. A voice of yours with the same name as a bundled one replaces it.
+**Voices** live in `jarvis/assets`. A voice is either a `<name>.pt` file, or a `<name>.mp3` clip of 3 to 10 seconds with a `<name>.txt` holding exactly what is said in it. Select one with `/voice set voice <name>`.
 
 ### Other files
 
 | File | What it is |
 |---|---|
-| `google_credentials.json`, `google_token.json` | Your Google sign-in, created by `jarvis google-setup`. Keep them private. |
+| `google_credentials.json`, `google_token.json` | Your Google sign-in, created by `python -m jarvis.google_setup`. Gitignored. |
 | `jarvis/models/training_data/jarvis.txt` | The personality and style Jarvis uses when you type. |
 | `jarvis/models/training_data/jarvis-voice.txt` | The same, for voice mode, written for short spoken answers. |
-| `conversations/` | Your saved conversation (in `jarvis/models/conversations/` if you run from a checkout). |
+| `jarvis/models/conversations/` | Your saved conversation. Gitignored. |
 
 ## Google (Gmail, Calendar, Drive, Docs, Sheets, Slides)
 
 Optional. Jarvis signs in as you, so it can reach your own mail, calendar, and files without anything being shared with a bot account, and you never have to share a document with it. The setup is done once:
 
-1. Run `jarvis google-setup`. With no credentials file yet, it prints the steps below with your links.
+1. Run `python -m jarvis.google_setup`. With no credentials file yet, it prints the steps below with your links.
 2. In [Google Cloud](https://console.cloud.google.com/projectcreate), create a project and turn on the six APIs (the setup output has a single link that enables them all).
 3. Under "OAuth consent screen", choose External, add your own Google account as a test user, then press **Publish app**. Without that, the sign-in expires every 7 days. Google will call the app unverified; since it's your own, choose Advanced, then "Go to Jarvis".
 4. Under "Credentials", create an **OAuth client ID** of type **Desktop app** and download the JSON.
-5. Run `jarvis google-setup "path\to\that\file.json"`. A browser tab opens; approve every permission. It then checks each service and tells you if one still needs its API switched on.
+5. Run `python -m jarvis.google_setup "path\to\that\file.json"`. A browser tab opens; approve every permission. It then checks each service and tells you if one still needs its API switched on.
 6. Restart Jarvis. The Google tools only appear once setup is done.
 
-Your credentials and sign-in are saved as `google_credentials.json` and `google_token.json` in your Jarvis folder. They stay on your machine and go only to Google.
+Your credentials and sign-in are saved as `google_credentials.json` and `google_token.json` in the project folder, both gitignored. They stay on your machine and go only to Google.
 
 Reading mail and documents sends their text to Claude to be understood, like any other file Jarvis reads. Anything that reaches other people or can't be undone easily asks first, with the full details shown (or spoken, in voice mode): sending an email, inviting people to an event, deleting an event, trashing a file or an email, sharing a file, and overwriting cells in a sheet. Text found inside emails and documents is treated as data, not as instructions.
 

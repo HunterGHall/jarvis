@@ -4,6 +4,3 @@ __pycache__/
 jarvis/models/conversations/
 google_credentials.json
 google_token.json
-build/
-dist/
-*.egg-info/

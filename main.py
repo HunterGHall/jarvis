@@ -1,3 +1,5 @@
-from jarvis.launch import main
+import sys
 
-main()
+from jarvis.cli import run
+
+run(start_in_voice="--voice" in sys.argv[1:])

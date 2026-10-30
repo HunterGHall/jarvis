@@ -1,6 +1,6 @@
 """Google sign-in and a small client for the Google REST APIs, using only the standard library.
 
-One-time setup (jarvis google-setup) opens a browser tab where you approve access. Jarvis then acts as you, so
+One-time setup (python -m jarvis.google_setup) opens a browser tab where you approve access. Jarvis then acts as you, so
 it can reach your own mail, calendar and files without anything being shared with a bot account. The sign-in is kept
 in google_token.json, next to the credentials file you download from Google Cloud.
 """
@@ -15,8 +15,11 @@ import urllib.parse
 import urllib.request
 import webbrowser
 from http.server import BaseHTTPRequestHandler, HTTPServer
+from pathlib import Path
 
-from jarvis.paths import GOOGLE_CREDENTIALS_PATH as CREDENTIALS_PATH, GOOGLE_TOKEN_PATH as TOKEN_PATH
+ROOT = Path(__file__).resolve().parents[4]
+CREDENTIALS_PATH = ROOT / "google_credentials.json"
+TOKEN_PATH = ROOT / "google_token.json"
 
 AUTH_URL = "https://accounts.google.com/o/oauth2/v2/auth"
 TOKEN_URL = "https://oauth2.googleapis.com/token"
@@ -28,7 +31,7 @@ SCOPES = [
     "https://www.googleapis.com/auth/spreadsheets",
     "https://www.googleapis.com/auth/presentations",
 ]
-SETUP_HINT = "Run 'jarvis google-setup' (or 'python main.py google-setup') to sign in again."
+SETUP_HINT = "Run 'python -m jarvis.google_setup' to sign in again."
 
 _lock = threading.Lock()
 _token = None  # the saved sign-in, loaded on first use
