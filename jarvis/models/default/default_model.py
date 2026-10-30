@@ -29,7 +29,11 @@ if not CONFIG_PATH.exists():
         "\n"
         "# Optional: a classic GitHub personal access token with the 'user' scope, to change your GitHub status\n"
         "[github]\n"
-        "token =\n",
+        "token =\n"
+        "\n"
+        "# Optional: a Fish Audio key, so Jarvis can speak aloud (fish.audio)\n"
+        "[fish]\n"
+        "api_key =\n",
         encoding="utf-8",
     )
     sys.exit(f"Created {CONFIG_PATH}. Fill in your details and run again.")

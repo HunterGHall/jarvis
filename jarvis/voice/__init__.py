@@ -1,4 +1,4 @@
-"""Voice mode: microphone -> faster-whisper -> Jarvis -> built-in OmniVoice text-to-speech -> speakers. Fully local."""
+"""Voice mode: microphone -> faster-whisper (on this PC) -> Jarvis -> Fish Audio text-to-speech -> speakers."""
 import io
 import queue
 import re
@@ -10,7 +10,7 @@ from configparser import ConfigParser
 import numpy as np
 import sounddevice as sd
 
-from jarvis import tts
+from jarvis.voice import tts
 from jarvis.models.default.default_model import CONFIG_PATH
 
 SAMPLE_RATE = 16000
@@ -39,22 +39,16 @@ def _bool(text):
 
 
 # Voice settings used for every speech request; change them live with `/voice set <name> <value>`.
-# name: (default, type, what it does). Defaults give the original-quality cloned voice with polish on.
+# name: (default, type, what it does). The default reference_id is the Jarvis voice model on Fish Audio.
 OPTIONS = {
-    "voice": ("jar", str, "voice name (a .pt or .mp3 + .txt in jarvis/assets)"),
-    "num_step": ("45", int, "voice refinement passes, 1-128 (more is higher quality but slower)"),
-    "guidance_scale": ("2.0", float, "prompt guidance, 0-20"),
-    "t_shift": ("0.10", float, "refinement timing"),
-    "position_temperature": ("5.0", float, "sampling order variation"),
-    "class_temperature": ("0.0", float, "sound variation"),
-    "layer_penalty_factor": ("5.0", float, "coarse-to-fine balance"),
-    "speed": ("1.0", float, "speaking speed, 0.25-4"),
-    "denoise": ("true", _bool, "clean reference noise"),
-    "postprocess_output": ("true", _bool, "polish generated audio"),
-    "effect_preset": ("broadcast", str, "even out volume: broadcast, podcast, warm, cinematic, raw..."),
-        "seed": ("", int, "fixed seed for repeatable delivery (blank = random)"),
-    "instruct": ("", str, "style instruction, e.g. calm, warm British butler"),
-    "language": ("", str, "language code such as en (blank = auto)"),
+    "reference_id": ("2b16afc295934c50b056b0b942e1c1a5", str, "Fish Audio voice model id (browse voices at fish.audio)"),
+    "model": ("s2.1-pro-free", str, "Fish Audio speech model: s1, s2-pro, s2.1-pro, s2.1-pro-free, drama-3"),
+    "speed": ("1.0", float, "speaking speed, 0.5-2"),
+    "volume": ("0", float, "volume change in decibels (positive is louder)"),
+    "latency": ("normal", str, "normal, balanced, or low (lower starts sooner, may sound rougher)"),
+    "temperature": ("0.7", float, "how much the delivery varies, 0-1"),
+    "top_p": ("0.7", float, "how adventurous the delivery is, 0-1"),
+    "normalize": ("true", _bool, "say numbers and symbols as words"),
     "silence": ("0.8", float, "seconds of quiet that end your turn when listening"),
 }
 settings = {}
@@ -71,11 +65,10 @@ def set_option(name, value):
     if name not in OPTIONS:
         raise KeyError(name)
     kind = OPTIONS[name][1]
-    cleared = value.strip().lower() in {"", "none", "auto", "default"} and name in {"seed", "instruct", "language"}
-    settings[name] = None if cleared else kind(value)
+    settings[name] = kind(value)
     if not _config.has_section(SECTION):
         _config.add_section(SECTION)
-    _config.set(SECTION, name, "" if settings[name] is None else str(settings[name]))
+    _config.set(SECTION, name, str(settings[name]))
     with open(CONFIG_PATH, "w", encoding="utf-8") as file:
         _config.write(file)
     return settings[name]
@@ -91,7 +84,7 @@ def check_ready():
 
 
 def preload():
-    """Loads the speech and listening models and runs one throwaway line, so voice is ready when the chat starts.
+    """Loads the listening model, so voice is ready when the chat starts.
 
     Returns an error message if something failed (None otherwise); does nothing when `preload = false` in config.conf.
     """
@@ -100,11 +93,8 @@ def preload():
     try:
         check_ready()
         _whisper_model()
-        tts.synthesize("Ready.", settings)
     except Exception as error:
         return f"{type(error).__name__}: {error}"
-    if not tts.on_gpu():
-        return "no CUDA GPU found, so speech runs on the CPU and will be slow (NVIDIA users: install the CUDA build of torch, see requirements.txt)"
     return None
 
 
@@ -178,7 +168,7 @@ def _whisper_model():
 def _transcribe_local(wav_bytes):
     with wave.open(io.BytesIO(wav_bytes)) as wav:
         samples = np.frombuffer(wav.readframes(wav.getnframes()), dtype="<i2").astype(np.float32) / 32768
-    segments, _ = _whisper_model().transcribe(samples, language=settings["language"] or None, vad_filter=True)
+    segments, _ = _whisper_model().transcribe(samples, vad_filter=True)
     return " ".join(segment.text.strip() for segment in segments).strip()
 
 
@@ -187,7 +177,7 @@ def transcribe(wav_bytes):
 
 
 def list_voices():
-    return [{"name": name, "kind": "clone"} for name in tts.voices()]
+    return [{"name": settings["reference_id"], "kind": f"Fish Audio voice model, speaking with {settings['model']}"}]
 
 
 def is_exit(text):

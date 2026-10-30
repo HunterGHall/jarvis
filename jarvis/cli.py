@@ -419,7 +419,7 @@ def _voice_command(arguments):
         for name, (_, _, help_text) in voice.OPTIONS.items():
             value = voice.settings[name]
             console.print(Text.assemble((f"  {name:<15}", "bold cyan"), (f"{'(auto)' if value is None else value!s:<14}", "white"), (help_text, "dim")))
-        console.print("[dim]  Change one with: /voice set <name> <value>   (e.g. /voice set num_step 16)[/dim]")
+        console.print("[dim]  Change one with: /voice set <name> <value>   (e.g. /voice set speed 1.1)[/dim]")
     elif action == "set" and len(words) >= 3:
         name = words[1].lower()
         try:
