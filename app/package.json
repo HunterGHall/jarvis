@@ -1,0 +1,29 @@
+{
+  "name": "jarvis",
+  "productName": "jarvis",
+  "version": "1.0.0",
+  "description": "J.A.R.V.I.S. desktop app",
+  "main": "main.js",
+  "author": "Hunter Hall",
+  "license": "MIT",
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder --win portable"
+  },
+  "devDependencies": {
+    "electron": "^39.0.0",
+    "electron-builder": "^26.0.0"
+  },
+  "build": {
+    "appId": "com.hunterhall.jarvis",
+    "productName": "jarvis",
+    "directories": { "output": "dist" },
+    "files": ["main.js", "preload.js", "renderer/**/*"],
+    "win": {
+      "target": "portable",
+      "icon": "icon.ico",
+      "signExecutable": false
+    },
+    "portable": { "artifactName": "jarvis.exe" }
+  }
+}
