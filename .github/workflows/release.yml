@@ -1,0 +1,50 @@
+# Builds the installer and publishes it as a GitHub Release, which is what installed copies of Jarvis update from.
+# To release: bump "version" in app/package.json, commit, then push a matching tag:
+#   git tag v0.2.1 && git push origin v0.2.1
+name: release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: app
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+          architecture: x64
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+
+      - name: Check the tag matches the app version
+        shell: bash
+        run: |
+          version=$(node -p "require('./package.json').version")
+          if [ "v$version" != "$GITHUB_REF_NAME" ]; then
+            echo "Tag $GITHUB_REF_NAME doesn't match package.json version $version"
+            exit 1
+          fi
+
+      - run: npm ci
+
+      - name: Bundle Python and the backend
+        run: npm run prepare:backend
+
+      - name: Build and publish the installer
+        run: npx electron-builder --win nsis --config setup.config.json --publish always
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

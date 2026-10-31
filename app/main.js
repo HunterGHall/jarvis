@@ -2,6 +2,7 @@ const { app, BrowserWindow, ipcMain, shell } = require("electron");
 const { spawn } = require("child_process");
 const fs = require("fs");
 const path = require("path");
+const { autoUpdater } = require("electron-updater");
 
 // The Python side lives in the project folder (jarvis/server.py). Find it next to the app or any folder above it.
 function findRoot() {
@@ -162,6 +163,25 @@ ipcMain.on("jarvis:theme", (_event, next) => {
   applyTheme();
 });
 
+// The installed app checks GitHub Releases for a newer version, downloads it in the background and installs it when the
+// user restarts (or next time they quit). The portable exe and `npm start` have nothing to update, so they skip it.
+function setupUpdater() {
+  if (!bundledBackend()) return;
+  autoUpdater.autoDownload = true;
+  autoUpdater.autoInstallOnAppQuit = true;
+  autoUpdater.on("update-available", (info) => send({ type: "update", state: "downloading", version: info.version }));
+  autoUpdater.on("update-downloaded", (info) => send({ type: "update", state: "ready", version: info.version }));
+  autoUpdater.on("error", (error) => console.error("Update check failed:", error.message));
+  const check = () => autoUpdater.checkForUpdates().catch(() => {});
+  check();
+  setInterval(check, 6 * 60 * 60 * 1000);
+}
+
+ipcMain.on("jarvis:install-update", () => {
+  quitting = true;
+  autoUpdater.quitAndInstall();
+});
+
 ipcMain.on("jarvis:command", (_event, command) => {
   if (backend && backend.stdin.writable) backend.stdin.write(JSON.stringify(command) + "\n");
 });
@@ -179,7 +199,10 @@ if (!app.requestSingleInstanceLock()) {
       win.focus();
     }
   });
-  app.whenReady().then(createWindow);
+  app.whenReady().then(() => {
+    createWindow();
+    setupUpdater();
+  });
 }
 
 app.on("before-quit", () => {

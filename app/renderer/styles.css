@@ -236,6 +236,9 @@ button { cursor: pointer; }
 
 
 /* ---------- console header: settings button, modes ---------- */
+.update-pill { margin-left: auto; margin-right: 8px; padding: 5px 10px; border: 1px solid rgba(255, 255, 255, 0.25); border-radius: 999px; background: transparent; color: #cfcfca; font: inherit; font-size: 11px; letter-spacing: 0.08em; }
+.update-pill:not(:disabled) { color: #fff; border-color: #fff; cursor: pointer; }
+.update-pill[hidden] { display: none; }
 .gear { width: 34px; height: 34px; border: 0; border-radius: 10px; background: transparent; color: #cfcfca; display: grid; place-items: center; transition: background 0.2s, color 0.2s; }
 .gear svg { transition: transform 0.5s cubic-bezier(0.2, 0.8, 0.2, 1); }
 .gear:hover { background: rgba(255, 255, 255, 0.1); color: #fff; }

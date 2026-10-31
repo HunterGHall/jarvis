@@ -509,6 +509,12 @@ const handlers = {
     showNotice(event.message);
     $("send").disabled = true;
   },
+  update(event) {
+    const pill = $("update-pill");
+    pill.hidden = false;
+    pill.disabled = event.state !== "ready";
+    pill.textContent = event.state === "ready" ? `RESTART TO UPDATE (${event.version})` : `DOWNLOADING ${event.version}…`;
+  },
   confirm: askApproval,
   levels: (event) => Face.levels(event),
   voice_state(event) {
@@ -542,6 +548,7 @@ document.querySelectorAll(".suggestions button").forEach((button) =>
   button.addEventListener("click", () => submit(button.dataset.prompt))
 );
 $("settings-open").addEventListener("click", () => openSettings());
+$("update-pill").addEventListener("click", () => window.jarvis.installUpdate());
 $("welcome-form").addEventListener("submit", (event) => {
   event.preventDefault();
   submitWelcome();
