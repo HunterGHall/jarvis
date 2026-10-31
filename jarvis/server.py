@@ -47,7 +47,7 @@ MODES = {
     "voice_voice": "You speak, Jarvis speaks back.",
 }
 THEMES = {"light", "dark"}
-UI = {"mode": "type_text", "theme": "light"}
+UI = {"mode": "type_text", "theme": "dark"}
 
 _turn_lock = threading.Lock()  # one question at a time
 _answers = {}  # confirmation id -> (event, [approved])
@@ -66,11 +66,11 @@ def _output_voice():
 
 
 def _load_ui():
-    parser = config_file.read()
-    mode = parser.get("app", "mode", fallback="").strip()
-    theme = parser.get("app", "theme", fallback="").strip()
-    UI["mode"] = mode if mode in MODES else "type_text"
-    UI["theme"] = theme if theme in THEMES else "light"
+    # Only the theme is remembered. The mode is not a setting: Jarvis always starts in Text, so it never starts
+    # listening (or speaking) by surprise.
+    theme = config_file.read().get("app", "theme", fallback="").strip()
+    UI["mode"] = "type_text"
+    UI["theme"] = theme if theme in THEMES else "dark"
 
 
 def _wake_word():
@@ -272,7 +272,7 @@ def _listen_loop(cancel):
 
     wake_word = str(voice.settings["wake_word"] or "jarvis").strip().lower()
     gated = wake_word not in {"none", "off"}
-    timeout = float(voice.settings["idle_timeout"] or 45)
+    timeout = float(voice.settings["idle_timeout"] or 30)
     stay_awake = str(voice.settings["wake_mode"]).strip().lower() == "stay_awake"
     awake = not gated
     last_activity = time.monotonic()
@@ -371,7 +371,11 @@ def _settings_schema():
         return {"id": f"{section}.{key}", "label": label, "type": "secret", "set": bool(value), "hint": hint, "help": help_text, "required": required}
 
     def field(section, key, label, kind, help_text, default="", options=None):
-        return {"id": f"{section}.{key}", "label": label, "type": kind, "value": current(section, key, default), "help": help_text, "options": options}
+        value = current(section, key, default)
+        if kind == "bool":
+            # config.conf may say True, yes, on or 1 (people write it by hand); the page only knows true and false
+            value = "true" if value.lower() in {"true", "yes", "on", "1"} else "false"
+        return {"id": f"{section}.{key}", "label": label, "type": kind, "value": value, "help": help_text, "options": options}
 
     voice_fields = []
     for name, (default, kind, help_text) in voice.OPTIONS.items():
@@ -454,6 +458,20 @@ def _save_settings(values):
     emit({"type": "profile", **_profile()})
 
 
+def _verify_key(key):
+    """Checks an Anthropic API key with a free request, so a typo is caught on the welcome screen, not on the first
+    question. Only a rejection counts as wrong: if Anthropic can't be reached, the key is accepted unchecked."""
+    import anthropic
+
+    try:
+        anthropic.Anthropic(api_key=key, max_retries=0, timeout=15).models.list(limit=1)
+        emit({"type": "key_check", "ok": True})
+    except (anthropic.AuthenticationError, anthropic.PermissionDeniedError):
+        emit({"type": "key_check", "ok": False, "message": "Anthropic didn't accept that key. Check it and try again."})
+    except Exception as error:
+        emit({"type": "key_check", "ok": True, "message": f"Couldn't check the key ({type(error).__name__}); saving it anyway."})
+
+
 def _mode_problem(mode):
     """Why a mode can't be used yet (None if it can)."""
     if mode.startswith("voice"):
@@ -481,8 +499,7 @@ def _set_ui(command):
             emit({"type": "error", "message": problem})
             emit({"type": "ui", "mode": UI["mode"], "theme": UI["theme"]})
             return
-        UI["mode"] = mode
-        changes["mode"] = mode
+        UI["mode"] = mode  # for this session only
         if _input_voice():
             _ensure_listening()
         else:
@@ -507,6 +524,8 @@ def _handle(command):
         if waiter:
             waiter[1][0] = bool(command.get("approved"))
             waiter[0].set()
+    elif kind == "verify_key":
+        threading.Thread(target=_verify_key, args=(str(command.get("key", "")).strip(),), daemon=True).start()
     elif kind == "get_settings":
         emit({"type": "settings", "sections": _settings_schema()})
     elif kind == "save_settings":
@@ -536,8 +555,6 @@ def _handle(command):
 def main():
     _load_ui()
     emit({"type": "ready", **_profile()})
-    if _input_voice():
-        _ensure_listening()  # the saved mode is one where you speak, so start listening for the wake word
     for line in sys.stdin:
         line = line.strip()
         if not line:
