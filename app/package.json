@@ -1,7 +1,7 @@
 {
   "name": "jarvis",
   "productName": "jarvis",
-  "version": "0.1.5",
+  "version": "0.1.6",
   "description": "J.A.R.V.I.S. desktop app",
   "main": "main.js",
   "author": "Hunter Hall",
@@ -35,5 +35,8 @@
     "portable": {
       "artifactName": "jarvis.exe"
     }
+  },
+  "dependencies": {
+    "electron-updater": "^6.8.11"
   }
 }
