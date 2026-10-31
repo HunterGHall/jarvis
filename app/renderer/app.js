@@ -75,7 +75,7 @@ const MODES = [
   { id: "voice_voice", short: "VOICE", title: "Voice", note: "You speak, Jarvis speaks back." },
 ];
 let mode = "type_text";
-let theme = document.documentElement.dataset.theme || "light";
+let theme = document.documentElement.dataset.theme || "dark";
 let wake = "Jarvis";
 
 function applyUi(next) {
@@ -339,25 +339,6 @@ function renderAppearance(form) {
   form.append(
     row("Theme", "Light or dark for the whole window.", segmented([["light", "LIGHT"], ["dark", "DARK"]], theme, (value) => send({ type: "set_ui", theme: value })))
   );
-  const label = document.createElement("div");
-  label.className = "sp-row";
-  label.style.borderBottom = "0";
-  label.style.paddingBottom = "0";
-  label.innerHTML = '<div class="title">How you and Jarvis talk</div><div class="help">The same four choices are above the console. Dictate and Voice listen for you to say \u201cJarvis\u201d (they go back to sleep after a while of silence); Read aloud and Voice speak the replies, which needs a Fish Audio key.</div>';
-  form.append(label);
-  const cards = document.createElement("div");
-  cards.className = "mode-cards";
-  for (const item of MODES) {
-    const card = document.createElement("button");
-    card.setAttribute("role", "radio");
-    card.setAttribute("aria-checked", String(item.id === mode));
-    card.innerHTML = `<b></b><span></span>`;
-    card.querySelector("b").textContent = item.title;
-    card.querySelector("span").textContent = item.note;
-    card.addEventListener("click", () => send({ type: "set_ui", mode: item.id }));
-    cards.append(card);
-  }
-  form.append(cards);
 }
 
 function renderSettings() {
@@ -411,6 +392,42 @@ function renderSettings() {
   updateSaveState();
 }
 
+// ---- the first-run welcome screen ------------------------------------------------------------------------------
+let welcomeBusy = false;
+let welcomeKey = "";
+
+function setWelcomeStatus(text, kind = "") {
+  $("wl-status").textContent = text;
+  $("wl-status").className = "wl-status " + kind;
+}
+
+function lockWelcome(locked) {
+  welcomeBusy = locked;
+  for (const element of $("welcome-form").elements) element.disabled = locked;
+  if (!locked) $("wl-go").disabled = !$("wl-anthropic").value.trim();
+}
+
+function showWelcome() {
+  $("welcome").hidden = false;
+  $("wl-anthropic").focus();
+}
+
+function hideWelcome() {
+  if ($("welcome").hidden) return;
+  $("welcome").hidden = true;
+  lockWelcome(false);
+  setWelcomeStatus("");
+  input.focus();
+}
+
+function submitWelcome() {
+  welcomeKey = $("wl-anthropic").value.trim();
+  if (!welcomeKey || welcomeBusy) return;
+  lockWelcome(true);
+  setWelcomeStatus("CHECKING YOUR KEY…");
+  send({ type: "verify_key", key: welcomeKey });
+}
+
 function applyProfile(event) {
   $("greeting").textContent = event.greeting;
   if (event.wake_word) {
@@ -421,15 +438,18 @@ function applyProfile(event) {
   applyUi({ mode: event.mode, theme: event.theme });
   if (needsSetup && !shownSetup) {
     shownSetup = true;
-    openSettings("Keys");
-  } else if (settingsOpen) {
-    renderSettings();
+    showWelcome();
+  } else if (!needsSetup) {
+    hideWelcome();
   }
+  if (settingsOpen) renderSettings();
 }
 
 const handlers = {
   ready(event) {
     ready = true;
+    Face.set({ starting: false });
+    input.placeholder = "Message Jarvis";
     applyProfile(event);
     setBusy(false);
     if (!settingsOpen) input.focus();
@@ -450,12 +470,31 @@ const handlers = {
     }
     if (settingsOpen) renderSettings();
   },
+  key_check(event) {
+    if (!event.ok) {
+      lockWelcome(false);
+      setWelcomeStatus(event.message, "bad");
+      $("wl-anthropic").focus();
+      return;
+    }
+    // The key is good: save it with whatever else was filled in. The profile that comes back closes the screen.
+    const values = { "anthropic.anthropic_api_key": welcomeKey };
+    for (const [id, field] of [["fish.api_key", "wl-fish"], ["personal.name", "wl-name"], ["personal.zip_code", "wl-zip"]]) {
+      if ($(field).value.trim()) values[id] = $(field).value.trim();
+    }
+    setWelcomeStatus(event.message || "SAVING…");
+    send({ type: "save_settings", values });
+  },
   busy: () => setBusy(true),
   idle: () => setBusy(false),
   tool_call: toolCall,
   tool_result: toolResult,
   reply,
   error(event) {
+    if (welcomeBusy) {
+      lockWelcome(false);
+      setWelcomeStatus(event.message, "bad");
+    }
     add("message error", event.message);
     Face.alert();
     if (saving) savingError = event.message;
@@ -463,6 +502,8 @@ const handlers = {
   },
   fatal(event) {
     ready = false;
+    Face.set({ starting: false });
+    input.placeholder = "Jarvis isn't running";
     setBusy(false);
     Face.alert();
     showNotice(event.message);
@@ -501,6 +542,12 @@ document.querySelectorAll(".suggestions button").forEach((button) =>
   button.addEventListener("click", () => submit(button.dataset.prompt))
 );
 $("settings-open").addEventListener("click", () => openSettings());
+$("welcome-form").addEventListener("submit", (event) => {
+  event.preventDefault();
+  submitWelcome();
+});
+$("wl-anthropic").addEventListener("input", () => ($("wl-go").disabled = welcomeBusy || !$("wl-anthropic").value.trim()));
+$("wl-skip").addEventListener("click", hideWelcome);
 $("settings-back").addEventListener("click", closeSettings);
 $("settings-save").addEventListener("click", () => {
   saving = true;
@@ -520,4 +567,6 @@ document.addEventListener("keydown", (event) => {
 
 buildModes();
 applyUi({});
+input.placeholder = "Starting up…";
+window.jarvis.setTheme(document.documentElement.dataset.theme || "dark");
 setBusy(false);
