@@ -39,5 +39,7 @@
     "uninstallDisplayName": "Jarvis",
     "deleteAppDataOnUninstall": true
   },
-  "publish": null
+  "publish": [
+    { "provider": "github", "owner": "HunterGHall", "repo": "jarvis" }
+  ]
 }
