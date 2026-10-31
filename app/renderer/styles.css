@@ -302,3 +302,27 @@ button { cursor: pointer; }
 .sp-save:hover:not(:disabled), .sp-test:hover { transform: translateY(-1px); }
 .sp-save:disabled { opacity: 0.25; cursor: default; }
 .sp-test { margin-top: 18px; background: transparent; color: var(--text); border: 1px solid var(--text); }
+
+/* ---------- first-run welcome ---------- */
+.welcome { position: fixed; inset: 0; z-index: 70; display: grid; place-items: center; padding: 24px; overflow-y: auto; color: var(--text); background: radial-gradient(circle at 1px 1px, var(--dots) 1px, transparent 1.4px) 0 0 / 28px 28px, radial-gradient(800px 600px at 50% 40%, var(--glowbg), var(--paper) 70%); animation: sp-in 0.5s cubic-bezier(0.2, 0.8, 0.2, 1); }
+.wl-card { width: min(520px, 100%); padding: 34px 38px 26px; background: var(--panel); color: #f1f1ee; border: 1px solid var(--panel-line); border-radius: 22px; box-shadow: 0 40px 80px rgba(0, 0, 0, 0.35); }
+.logo-badge { display: block; width: 104px; height: 104px; margin: -14px 0 2px -16px; }
+.logo-badge img { display: block; width: 100%; height: 100%; object-fit: contain; mix-blend-mode: screen; }
+.wl-card h1 { margin: 0 0 8px; font-family: var(--head); font-weight: 400; font-size: 34px; letter-spacing: 0.04em; line-height: 1; }
+.wl-lead { margin: 0 0 22px; color: #a8a8a2; font-size: 13px; line-height: 1.55; }
+.wl-field { display: block; margin-bottom: 16px; }
+.wl-field > span { display: block; margin-bottom: 6px; font-family: var(--mono); font-size: 10px; letter-spacing: 0.2em; text-transform: uppercase; }
+.wl-field em { margin-left: 8px; font-style: normal; color: #ff7a8a; }
+.wl-field em.opt { color: #77776f; }
+.wl-field input { width: 100%; border: 0; border-bottom: 1px solid rgba(255, 255, 255, 0.4); background: transparent; color: #fff; padding: 8px 2px; font-family: var(--mono); font-size: 13px; outline: 0; border-radius: 0; transition: border-color 0.2s; }
+.wl-field input:focus { border-bottom-color: #fff; }
+.wl-field input::placeholder { color: #66665f; }
+.wl-field small { display: block; margin-top: 6px; color: #8d8d88; font-size: 12px; }
+.wl-field small a { color: #fff; }
+.wl-two { display: grid; grid-template-columns: 1fr 1fr; gap: 0 22px; }
+.wl-status { min-height: 18px; margin: 2px 0 12px; font-family: var(--mono); font-size: 11px; letter-spacing: 0.1em; color: #8d8d88; }
+.wl-status.bad { color: #ff7a8a; }
+.wl-actions { display: flex; align-items: center; justify-content: space-between; }
+.wl-card .sp-link { color: #8d8d88; }
+.wl-card .sp-save { background: #fff; color: var(--ink); }
+.wl-foot { margin: 18px 0 0; color: #77776f; font-size: 11px; text-align: center; }
