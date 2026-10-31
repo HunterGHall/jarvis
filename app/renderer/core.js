@@ -39,6 +39,7 @@
 
   // color: the accent; label: the large word in the middle; sub: the small line under it
   const MODES = {
+    starting: { color: [150, 190, 255], label: "STARTING UP", sub: "ONE MOMENT" },
     idle: { color: [150, 190, 255], label: "ONLINE", sub: "AT YOUR SERVICE" },
     listening: { color: [60, 220, 160], label: "LISTENING", sub: "GO AHEAD" },
     waiting: { color: [150, 190, 255], label: "STANDING BY", sub: "" }, // the sub line names the wake word
@@ -99,7 +100,7 @@
   `;
 
   // ---- state -------------------------------------------------------------------------------------------------
-  const state = { voice: null, busy: false, respondUntil: 0, alert: 0, tools: [] };
+  const state = { voice: null, busy: false, respondUntil: 0, alert: 0, tools: [], starting: true };
   const cur = { color: [150, 190, 255], env: 0 };
   let t = 0;
   let last = performance.now();
@@ -110,6 +111,7 @@
   const mix = (a, b, k) => a.map((v, i) => v + (b[i] - v) * k);
 
   function currentMode() {
+    if (state.starting) return "starting"; // until the back end has reported in
     if (state.voice === "speaking") return "speaking";
     if (state.voice === "listening" || state.voice === "hearing") return "listening";
     if (state.voice === "waiting") return "waiting";
