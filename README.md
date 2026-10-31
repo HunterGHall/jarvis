@@ -118,7 +118,22 @@ Jarvis also runs as a normal window, built with Electron (HTML, CSS, and JavaScr
 
 2. Run `app\dist\jarvis.exe`. For development, `npm start` in `app` opens the window without building.
 
-The `.exe` is the window only. It starts Python in the project folder, so it has to stay inside the project (it looks for `jarvis/server.py` next to itself and in the folders above), and the Python requirements above still need to be installed. Set `JARVIS_HOME` to the project folder or `JARVIS_PYTHON` to a Python path if it can't find them.
+That `jarvis.exe` is the window only. It starts Python in the project folder, so it has to stay inside the project (it looks for `jarvis/server.py` next to itself and in the folders above), and the Python requirements above still need to be installed. Set `JARVIS_HOME` to the project folder or `JARVIS_PYTHON` to a Python path if it can't find them.
+
+### Installer
+
+To give Jarvis to someone (or install it like any other Windows app) build the installer instead:
+
+```
+cd app
+npm run build:setup
+```
+
+This produces `app\dist-setup\jarvis-setup.exe` (about 180 MB). It is a normal setup wizard: licence, who it is for, install location, Start menu and desktop shortcuts, a "launch Jarvis" box at the end, and an entry in Apps & features to uninstall it. It carries its own copy of Python and every package, so the PC needs nothing installed first. The build downloads the matching Python runtime and the packages, so it needs the same Python version as the one on the build PC (3.10 here) and an internet connection, and the first run takes a few minutes. `npm run prepare:backend` alone rebuilds just that bundle (`app\backend-build`); `powershell -File scripts\prepare-backend.ps1 -CodeOnly` refreshes only the Jarvis code in it.
+
+An installed Jarvis keeps what is yours (`config.conf` with your keys, the saved conversation, the Google sign-in, and the speech-recognition model it downloads) in `%APPDATA%\jarvis`, not in the install folder, so installing a newer version over it keeps everything. Uninstalling removes all of it, so nothing of yours is left on the PC afterwards. The first time it starts, a welcome screen asks for your Anthropic API key (checked with Anthropic before it is saved, so a typo is caught straight away), and optionally a Fish Audio key, your name and your zip code. Everything can be changed later in Settings.
+
+The installer is not code-signed, so Windows SmartScreen may say "unknown publisher" the first time: choose More info, then Run anyway.
 
 The window is just two things: the Jarvis ring (`app/renderer/core.js`) and the console beside it. In the middle of the ring is a visualizer: at rest its rings turn and a slow wave runs around the bars, and while Jarvis speaks aloud it draws the spectrum of the actual audio (the voice code reports levels to the window). It also ripples while it listens and pulses while it thinks. When a tool runs, a shockwave leaves the logo, a lane of the ring lights up in the tool's color with a comet running along it, and the tool is listed inside the circle; when it ends, the lane flashes green (or red) and fades.
 
@@ -131,9 +146,9 @@ The window is just two things: the Jarvis ring (`app/renderer/core.js`) and the 
 | Read aloud | type | speaks back |
 | Voice | speak | speaks back |
 
-In Dictate and Voice there is no button: Jarvis listens by itself (also at start-up, if that is the mode you left it in) and only reacts after it hears its name, every time: "Jarvis, what's the weather?", or just "Jarvis" and then your request. After it answers it goes straight back to sleep. If you would rather not repeat the name, set `wake_mode` to `stay_awake` in the voice settings: after the name it then keeps the conversation going without it until you have said nothing for 45 seconds (`idle_timeout`, counted from the end of its last answer), and then it needs the name again. Saying "stop listening" also puts it to sleep. The wake word itself, and how sensitive the microphone is (`mic_threshold` and `noise_margin`; lower hears softer voices), are in the voice settings too, and setting the wake word to `none` makes it always listen. Switching to a typing mode turns the microphone off. Speaking needs a Fish Audio key. Listening loads its model the first time, so it takes a few seconds to start. The choice of mode is remembered in `config.conf`.
+In Dictate and Voice there is no button: as soon as you pick the mode Jarvis listens by itself, and it only reacts after it hears its name, every time: "Jarvis, what's the weather?", or just "Jarvis" and then your request. After it answers it goes straight back to sleep. If you would rather not repeat the name, set `wake_mode` to `stay_awake` in the voice settings: after the name it then keeps the conversation going without it until you have said nothing for 30 seconds (`idle_timeout`, counted from the end of its last answer), and then it needs the name again. Saying "stop listening" also puts it to sleep. The wake word itself, and how sensitive the microphone is (`mic_threshold` and `noise_margin`; lower hears softer voices), are in the voice settings too, and setting the wake word to `none` makes it always listen. Switching to a typing mode turns the microphone off. Speaking needs a Fish Audio key. Listening loads its model the first time, so it takes a few seconds to start. The mode is not a setting and is not saved: Jarvis always starts in Text, so it never starts listening or speaking by surprise.
 
-**Settings.** The gear in the console opens the settings page: light or dark theme, the mode, your Anthropic, Fish Audio and GitHub keys (shown only as "saved, ends in ...", never in full), the model, your name and zip code, how many messages are remembered, whether to show the cost under replies, and every voice setting, with a button to test the voice. Changes are written to `config.conf` and take effect straight away, no restart. On a first run with no key, the settings page opens by itself.
+**Settings.** The gear in the console opens the settings page: dark (the default) or light theme, your Anthropic, Fish Audio and GitHub keys (shown only as "saved, ends in ...", never in full), the model, your name and zip code, how many messages are remembered, whether to show the cost under replies, and every voice setting, with a button to test the voice. Changes are written to `config.conf` and take effect straight away, no restart. On a first run with no key, the settings page opens by itself.
 
 
 ## Configuration
