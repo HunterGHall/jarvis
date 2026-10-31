@@ -1,0 +1,43 @@
+{
+  "appId": "com.hunterhall.jarvis",
+  "productName": "jarvis",
+  "directories": {
+    "output": "dist-setup"
+  },
+  "files": [
+    "main.js",
+    "preload.js",
+    "renderer/**/*"
+  ],
+  "extraResources": [
+    {
+      "from": "backend-build/python",
+      "to": "python"
+    },
+    {
+      "from": "backend-build/backend",
+      "to": "backend"
+    }
+  ],
+  "win": {
+    "target": "nsis",
+    "icon": "jarvis-logo.ico",
+    "signExecutable": false
+  },
+  "nsis": {
+    "artifactName": "jarvis-setup.exe",
+    "oneClick": false,
+    "allowToChangeInstallationDirectory": true,
+    "createDesktopShortcut": true,
+    "createStartMenuShortcut": true,
+    "shortcutName": "Jarvis",
+    "runAfterFinish": true,
+    "license": "backend-build/license.txt",
+    "installerIcon": "jarvis-logo.ico",
+    "uninstallerIcon": "jarvis-logo.ico",
+    "installerHeaderIcon": "jarvis-logo.ico",
+    "uninstallDisplayName": "Jarvis",
+    "deleteAppDataOnUninstall": true
+  },
+  "publish": null
+}
