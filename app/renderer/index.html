@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
   <meta charset="utf-8">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:">
@@ -62,6 +62,34 @@
         <button class="allow" id="confirm-yes">ALLOW</button>
       </div>
     </div>
+  </div>
+
+  <div class="welcome" id="welcome" hidden>
+    <form class="wl-card" id="welcome-form" autocomplete="off">
+      <span class="logo-badge"><img src="assets/logo.png" alt="J.A.R.V.I.S."></span>
+      <h1>Welcome</h1>
+      <p class="wl-lead">Let's get Jarvis ready. Your keys are saved in config.conf on this PC, and only ever sent to the service they belong to.</p>
+      <label class="wl-field">
+        <span>Anthropic API key <em>required</em></span>
+        <input id="wl-anthropic" type="password" placeholder="sk-ant-…" spellcheck="false" autocomplete="off">
+        <small>Lets Jarvis think. <a href="https://console.anthropic.com/settings/keys">Get a key</a></small>
+      </label>
+      <label class="wl-field">
+        <span>Fish Audio API key <em class="opt">optional</em></span>
+        <input id="wl-fish" type="password" placeholder="Only needed for Jarvis to speak aloud" spellcheck="false" autocomplete="off">
+        <small>Lets Jarvis talk back. <a href="https://fish.audio">Get a key</a></small>
+      </label>
+      <div class="wl-two">
+        <label class="wl-field"><span>Your name <em class="opt">optional</em></span><input id="wl-name" type="text" spellcheck="false"></label>
+        <label class="wl-field"><span>Zip code <em class="opt">optional</em></span><input id="wl-zip" type="text" inputmode="numeric" spellcheck="false"></label>
+      </div>
+      <div class="wl-status" id="wl-status"></div>
+      <div class="wl-actions">
+        <button type="button" class="sp-link" id="wl-skip">SKIP FOR NOW</button>
+        <button type="submit" class="sp-save" id="wl-go" disabled>GET STARTED</button>
+      </div>
+      <p class="wl-foot">You can change all of this later in Settings (the gear in the console).</p>
+    </form>
   </div>
 
   <div class="settings-page" id="settings-page" hidden>
