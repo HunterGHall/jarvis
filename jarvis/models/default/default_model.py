@@ -1,5 +1,6 @@
 import anthropic
 import json
+import os
 import re
 import sys
 import time
@@ -9,8 +10,9 @@ from pathlib import Path
 # Resolve paths relative to this file, not the working directory
 MODELS_DIR = Path(__file__).resolve().parent.parent
 ROOT_DIR = MODELS_DIR.parents[1]
-CONVERSATIONS_DIR = MODELS_DIR / "conversations"
-CONVERSATIONS_DIR.mkdir(exist_ok=True)
+# The saved conversation lives next to the code, unless the installed app says where the user's data goes
+CONVERSATIONS_DIR = Path(os.environ["JARVIS_DATA"]) / "conversations" if os.environ.get("JARVIS_DATA") else MODELS_DIR / "conversations"
+CONVERSATIONS_DIR.mkdir(parents=True, exist_ok=True)
 
 # Create a config template on first run, since the real one is gitignored
 from jarvis.config_file import CONFIG_PATH, create_if_missing  # noqa: E402
