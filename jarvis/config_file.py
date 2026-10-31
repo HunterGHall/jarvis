@@ -3,11 +3,16 @@
 Everything that edits the file goes through `update`, which reads the file fresh first, so a change made by one part of
 Jarvis never overwrites a newer change made by another.
 """
+import os
 from configparser import ConfigParser
 from pathlib import Path
 
-# The project folder, which is one level above this package
-CONFIG_PATH = Path(__file__).resolve().parent.parent / "config.conf"
+# Where Jarvis keeps what belongs to the user: config.conf, the saved conversation, the Google sign-in. Normally the
+# project folder (one level above this package). The installed desktop app has no project folder, so it sets JARVIS_DATA
+# to a folder in the user's profile.
+DATA_DIR = Path(os.environ["JARVIS_DATA"]) if os.environ.get("JARVIS_DATA") else Path(__file__).resolve().parent.parent
+DATA_DIR.mkdir(parents=True, exist_ok=True)
+CONFIG_PATH = DATA_DIR / "config.conf"
 
 TEMPLATE = (
     "[anthropic]\n"
