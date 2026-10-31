@@ -27,11 +27,11 @@ function send(event) {
   if (win && !win.isDestroyed()) win.webContents.send("jarvis:event", event);
 }
 
-function startBackend(root, candidates) {
+function startBackend(root, candidates, extraEnv = {}) {
   const [command, ...args] = candidates[0];
   const child = spawn(command, [...args, "-m", "jarvis.server"], {
     cwd: root,
-    env: { ...process.env, PYTHONIOENCODING: "utf-8", PYTHONUNBUFFERED: "1" },
+    env: { ...process.env, PYTHONIOENCODING: "utf-8", PYTHONUNBUFFERED: "1", ...extraEnv },
     windowsHide: true,
   });
   backend = child;
@@ -57,7 +57,7 @@ function startBackend(root, candidates) {
     stderrTail = (stderrTail + chunk).slice(-2000);
   });
   child.on("error", (error) => {
-    if (error.code === "ENOENT" && candidates.length > 1) return startBackend(root, candidates.slice(1));
+    if (error.code === "ENOENT" && candidates.length > 1) return startBackend(root, candidates.slice(1), extraEnv);
     send({ type: "fatal", message: `Couldn't start Python (${error.message}). Install Python 3.10+ or set JARVIS_PYTHON.` });
   });
   child.on("exit", (code) => {
@@ -66,7 +66,21 @@ function startBackend(root, candidates) {
   });
 }
 
+// The installed app carries its own Python and the jarvis code in its resources folder (see scripts/prepare-backend.ps1),
+// and keeps what belongs to the user (config.conf, the conversation) in the user's profile, not in the install folder.
+function bundledBackend() {
+  if (!app.isPackaged) return null;
+  const python = path.join(process.resourcesPath, "python", "python.exe");
+  const code = path.join(process.resourcesPath, "backend");
+  return fs.existsSync(python) && fs.existsSync(path.join(code, "jarvis", "server.py")) ? { python, code } : null;
+}
+
 function launchBackend() {
+  const bundled = bundledBackend();
+  if (bundled) {
+    startBackend(bundled.code, [[bundled.python]], { JARVIS_DATA: app.getPath("userData") });
+    return;
+  }
   const root = findRoot();
   if (!root) {
     send({ type: "fatal", message: "Couldn't find the Jarvis project folder (jarvis/server.py). Put Jarvis.exe inside it, or set JARVIS_HOME." });
@@ -78,16 +92,43 @@ function launchBackend() {
   startBackend(root, candidates);
 }
 
+// The window's own buttons (minimize, close) are drawn by Electron, so they have to be told about the theme. The theme
+// is saved in a small file, so the window starts in the right colors instead of flashing the other theme while the page
+// loads, and it is applied again whenever Windows redraws that part of the window (it can reset it).
+const THEME_COLORS = { light: { color: "#e5e4df", symbolColor: "#0c0c0d" }, dark: { color: "#09090b", symbolColor: "#ecece8" } };
+let theme = "dark";
+
+function themeFile() {
+  return path.join(app.getPath("userData"), "theme.txt");
+}
+
+function loadTheme() {
+  try {
+    const saved = fs.readFileSync(themeFile(), "utf8").trim();
+    if (THEME_COLORS[saved]) theme = saved;
+  } catch {}
+}
+
+function applyTheme() {
+  if (!win || win.isDestroyed()) return;
+  const colors = THEME_COLORS[theme];
+  win.setTitleBarOverlay({ ...colors, height: 48 });
+  win.setBackgroundColor(colors.color);
+}
+
 function createWindow() {
+  loadTheme();
   win = new BrowserWindow({
     width: 1360,
     height: 820,
     minWidth: 960,
     minHeight: 640,
-    backgroundColor: "#e5e4df",
+    backgroundColor: THEME_COLORS[theme].color,
     title: "J.A.R.V.I.S.",
+    // Packaged builds carry the icon inside the exe; this is for `npm start`
+    ...(app.isPackaged ? {} : { icon: path.join(__dirname, "jarvis-logo.ico") }),
     titleBarStyle: "hidden",
-    titleBarOverlay: { color: "#e5e4df", symbolColor: "#0c0c0d", height: 48 },
+    titleBarOverlay: { ...THEME_COLORS[theme], height: 48 },
     webPreferences: {
       preload: path.join(__dirname, "preload.js"),
       contextIsolation: true,
@@ -96,6 +137,7 @@ function createWindow() {
     },
   });
   win.setMenuBarVisibility(false);
+  for (const name of ["maximize", "unmaximize", "restore", "enter-full-screen", "leave-full-screen", "focus", "show"]) win.on(name, applyTheme);
   win.loadFile(path.join(__dirname, "renderer", "index.html"));
   win.webContents.setWindowOpenHandler(({ url }) => {
     if (/^https?:\/\//i.test(url)) shell.openExternal(url);
@@ -111,19 +153,22 @@ function createWindow() {
   win.webContents.once("did-finish-load", launchBackend);
 }
 
-// The window's own buttons (minimize, close) are drawn by Electron, so they have to be told about the theme
-const THEME_COLORS = { light: { color: "#e5e4df", symbolColor: "#0c0c0d" }, dark: { color: "#09090b", symbolColor: "#ecece8" } };
-ipcMain.on("jarvis:theme", (_event, theme) => {
-  const colors = THEME_COLORS[theme] || THEME_COLORS.light;
-  if (win && !win.isDestroyed()) {
-    win.setTitleBarOverlay({ ...colors, height: 48 });
-    win.setBackgroundColor(colors.color);
-  }
+ipcMain.on("jarvis:theme", (_event, next) => {
+  if (!THEME_COLORS[next]) return;
+  theme = next;
+  try {
+    fs.writeFileSync(themeFile(), theme);
+  } catch {}
+  applyTheme();
 });
 
 ipcMain.on("jarvis:command", (_event, command) => {
   if (backend && backend.stdin.writable) backend.stdin.write(JSON.stringify(command) + "\n");
 });
+
+// The installed app and a copy run from the project folder (npm start, or the portable jarvis.exe) each get their own
+// profile. Sharing one would also share the single-instance lock, and whichever started second would quit without a word.
+if (!bundledBackend() && !app.commandLine.hasSwitch("user-data-dir")) app.setPath("userData", path.join(app.getPath("appData"), "jarvis-portable"));
 
 if (!app.requestSingleInstanceLock()) {
   app.quit();
