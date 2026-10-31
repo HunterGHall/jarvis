@@ -17,9 +17,10 @@ import webbrowser
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parents[4]
-CREDENTIALS_PATH = ROOT / "google_credentials.json"
-TOKEN_PATH = ROOT / "google_token.json"
+from jarvis.config_file import DATA_DIR
+
+CREDENTIALS_PATH = DATA_DIR / "google_credentials.json"
+TOKEN_PATH = DATA_DIR / "google_token.json"
 
 AUTH_URL = "https://accounts.google.com/o/oauth2/v2/auth"
 TOKEN_URL = "https://oauth2.googleapis.com/token"
