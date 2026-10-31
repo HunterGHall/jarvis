@@ -1,5 +1,6 @@
 """Voice mode: microphone -> faster-whisper (on this PC) -> Jarvis -> Fish Audio text-to-speech -> speakers."""
 import io
+import os
 import queue
 import re
 import threading
@@ -46,15 +47,15 @@ OPTIONS = {
     "model": ("s2.1-pro-free", str, "Fish Audio speech model: s1, s2-pro, s2.1-pro, s2.1-pro-free, drama-3"),
     "speed": ("1.0", float, "speaking speed, 0.5-2"),
     "volume": ("0", float, "volume change in decibels (positive is louder)"),
-    "latency": ("normal", str, "normal, balanced, or low (lower starts sooner, may sound rougher)"),
+    "latency": ("low", str, "normal, balanced, or low (lower starts sooner, may sound rougher)"),
     "temperature": ("0.7", float, "how much the delivery varies, 0-1"),
     "top_p": ("0.7", float, "how adventurous the delivery is, 0-1"),
     "normalize": ("true", _bool, "say numbers and symbols as words"),
     "silence": ("0.8", float, "seconds of quiet that end your turn when listening"),
     "wake_word": ("jarvis", str, 'the word that wakes Jarvis when you speak to it; "none" skips this and keeps it always listening'),
     "wake_mode": ("every_time", str, "every_time: say the wake word before every request; stay_awake: after the wake word it keeps listening, without it, until idle_timeout seconds of silence"),
-    "idle_timeout": ("45", float, "with wake_mode stay_awake, the seconds of silence before Jarvis goes back to sleep and needs the wake word again (also how long it waits for your request after hearing just its name)"),
-    "mic_threshold": ("150", float, "the quietest sound that counts as speech; lower hears softer voices"),
+    "idle_timeout": ("30", float, "with wake_mode stay_awake, the seconds of silence before Jarvis goes back to sleep and needs the wake word again (also how long it waits for your request after hearing just its name)"),
+    "mic_threshold": ("100", float, "the quietest sound that counts as speech; lower hears softer voices"),
     "noise_margin": ("2", float, "how many times louder than the room's background noise your voice must be; lower is more sensitive"),
 }
 settings = {}
@@ -179,8 +180,15 @@ def _whisper_model():
         if _whisper is None:
             from faster_whisper import WhisperModel
 
-            # Downloads the small English model once (~150 MB), then runs offline.
-            _whisper = WhisperModel(_setting("whisper_model", "base.en"), device="cpu", compute_type="int8")
+            # Downloads the small English model once (~150 MB), then runs offline. The installed app keeps it in its
+            # own data folder (so uninstalling removes it); a copy run from the project uses the shared cache.
+            folder = os.environ.get("JARVIS_DATA")
+            _whisper = WhisperModel(
+                _setting("whisper_model", "base.en"),
+                device="cpu",
+                compute_type="int8",
+                download_root=os.path.join(folder, "models") if folder else None,
+            )
         return _whisper
 
 
