@@ -1,14 +1,16 @@
 {
   "name": "jarvis",
   "productName": "jarvis",
-  "version": "1.0.0",
+  "version": "0.1.5",
   "description": "J.A.R.V.I.S. desktop app",
   "main": "main.js",
   "author": "Hunter Hall",
   "license": "MIT",
   "scripts": {
     "start": "electron .",
-    "build": "electron-builder --win portable"
+    "build": "electron-builder --win portable",
+    "prepare:backend": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/prepare-backend.ps1",
+    "build:setup": "npm run prepare:backend && electron-builder --win nsis --config setup.config.json"
   },
   "devDependencies": {
     "electron": "^39.0.0",
@@ -17,13 +19,21 @@
   "build": {
     "appId": "com.hunterhall.jarvis",
     "productName": "jarvis",
-    "directories": { "output": "dist" },
-    "files": ["main.js", "preload.js", "renderer/**/*"],
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "renderer/**/*"
+    ],
     "win": {
       "target": "portable",
-      "icon": "icon.ico",
+      "icon": "jarvis-logo.ico",
       "signExecutable": false
     },
-    "portable": { "artifactName": "jarvis.exe" }
+    "portable": {
+      "artifactName": "jarvis.exe"
+    }
   }
 }
