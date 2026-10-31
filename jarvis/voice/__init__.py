@@ -1,5 +1,6 @@
 """Voice mode: microphone -> faster-whisper (on this PC) -> Jarvis -> Fish Audio text-to-speech -> speakers."""
 import io
+import os
 import queue
 import re
 import threading
@@ -10,6 +11,7 @@ from configparser import ConfigParser
 import numpy as np
 import sounddevice as sd
 
+from jarvis import config_file
 from jarvis.voice import tts
 from jarvis.models.default.default_model import CONFIG_PATH
 
@@ -45,19 +47,32 @@ OPTIONS = {
     "model": ("s2.1-pro-free", str, "Fish Audio speech model: s1, s2-pro, s2.1-pro, s2.1-pro-free, drama-3"),
     "speed": ("1.0", float, "speaking speed, 0.5-2"),
     "volume": ("0", float, "volume change in decibels (positive is louder)"),
-    "latency": ("normal", str, "normal, balanced, or low (lower starts sooner, may sound rougher)"),
+    "latency": ("low", str, "normal, balanced, or low (lower starts sooner, may sound rougher)"),
     "temperature": ("0.7", float, "how much the delivery varies, 0-1"),
     "top_p": ("0.7", float, "how adventurous the delivery is, 0-1"),
     "normalize": ("true", _bool, "say numbers and symbols as words"),
     "silence": ("0.8", float, "seconds of quiet that end your turn when listening"),
+    "wake_word": ("jarvis", str, 'the word that wakes Jarvis when you speak to it; "none" skips this and keeps it always listening'),
+    "wake_mode": ("every_time", str, "every_time: say the wake word before every request; stay_awake: after the wake word it keeps listening, without it, until idle_timeout seconds of silence"),
+    "idle_timeout": ("30", float, "with wake_mode stay_awake, the seconds of silence before Jarvis goes back to sleep and needs the wake word again (also how long it waits for your request after hearing just its name)"),
+    "mic_threshold": ("100", float, "the quietest sound that counts as speech; lower hears softer voices"),
+    "noise_margin": ("2", float, "how many times louder than the room's background noise your voice must be; lower is more sensitive"),
 }
 settings = {}
-for _name, (_default, _type, _help) in OPTIONS.items():
-    _raw = _setting(_name, _default)
-    try:
-        settings[_name] = _type(_raw) if _raw != "" else None
-    except ValueError:
-        settings[_name] = _type(_default) if _default != "" else None
+
+
+def reload():
+    """Reads the [voice] settings from config.conf again (after they were changed somewhere else)."""
+    _config.read(CONFIG_PATH)
+    for name, (default, kind, _) in OPTIONS.items():
+        raw = _setting(name, default)
+        try:
+            settings[name] = kind(raw) if raw != "" else None
+        except ValueError:
+            settings[name] = kind(default) if default != "" else None
+
+
+reload()
 
 
 def set_option(name, value):
@@ -65,12 +80,9 @@ def set_option(name, value):
     if name not in OPTIONS:
         raise KeyError(name)
     kind = OPTIONS[name][1]
-    settings[name] = kind(value)
-    if not _config.has_section(SECTION):
-        _config.add_section(SECTION)
-    _config.set(SECTION, name, str(settings[name]))
-    with open(CONFIG_PATH, "w", encoding="utf-8") as file:
-        _config.write(file)
+    stored = kind(value)
+    config_file.update({SECTION: {name: stored}})
+    reload()
     return settings[name]
 
 
@@ -108,8 +120,11 @@ def _to_wav(samples):
     return buffer.getvalue()
 
 
-def listen(on_state=None):
-    """Blocks until the user speaks and then pauses; returns WAV bytes (None if it was only a blip)."""
+def listen(on_state=None, cancel=None, max_wait=None):
+    """Blocks until the user speaks and then pauses; returns WAV bytes.
+
+    Returns None if it was only a blip, `cancel` was set, or nothing was said for `max_wait` seconds.
+    """
     if on_state:
         on_state("listening")
     recent = []  # rolling pre-roll, so the first word is not clipped
@@ -117,8 +132,13 @@ def listen(on_state=None):
     noise = []
     threshold = None
     speech = quiet = 0
+    started = time.monotonic()
     with sd.InputStream(samplerate=SAMPLE_RATE, channels=1, dtype="int16", blocksize=BLOCK) as stream:
         while True:
+            if cancel is not None and cancel.is_set():
+                return None
+            if max_wait is not None and not blocks and time.monotonic() - started > max_wait:
+                return None
             data, _ = stream.read(BLOCK)
             frame = data[:, 0].copy()
             level = float(np.sqrt(np.mean(frame.astype(np.float32) ** 2)))
@@ -127,7 +147,7 @@ def listen(on_state=None):
                 noise.append(level)
                 recent.append(frame)
                 if len(noise) >= CALIBRATION_BLOCKS:
-                    threshold = max(np.mean(noise) * 3, 400.0)
+                    threshold = max(np.mean(noise) * settings["noise_margin"], settings["mic_threshold"])
                 continue
             if not blocks:
                 recent = (recent + [frame])[-CALIBRATION_BLOCKS:]
@@ -160,20 +180,27 @@ def _whisper_model():
         if _whisper is None:
             from faster_whisper import WhisperModel
 
-            # Downloads the small English model once (~150 MB), then runs offline.
-            _whisper = WhisperModel(_setting("whisper_model", "base.en"), device="cpu", compute_type="int8")
+            # Downloads the small English model once (~150 MB), then runs offline. The installed app keeps it in its
+            # own data folder (so uninstalling removes it); a copy run from the project uses the shared cache.
+            folder = os.environ.get("JARVIS_DATA")
+            _whisper = WhisperModel(
+                _setting("whisper_model", "base.en"),
+                device="cpu",
+                compute_type="int8",
+                download_root=os.path.join(folder, "models") if folder else None,
+            )
         return _whisper
 
 
-def _transcribe_local(wav_bytes):
+def _transcribe_local(wav_bytes, prompt=None):
     with wave.open(io.BytesIO(wav_bytes)) as wav:
         samples = np.frombuffer(wav.readframes(wav.getnframes()), dtype="<i2").astype(np.float32) / 32768
-    segments, _ = _whisper_model().transcribe(samples, vad_filter=True)
+    segments, _ = _whisper_model().transcribe(samples, vad_filter=True, initial_prompt=prompt)
     return " ".join(segment.text.strip() for segment in segments).strip()
 
 
-def transcribe(wav_bytes):
-    return _transcribe_local(wav_bytes)
+def transcribe(wav_bytes, prompt=None):
+    return _transcribe_local(wav_bytes, prompt)
 
 
 def list_voices():
@@ -223,8 +250,45 @@ def _synthesize(text):
     return _trim(audio, rate), rate
 
 
-def speak(text, on_state=None):
-    """Speaks text, synthesizing the next chunk while the current one plays."""
+BANDS = 40  # how many frequency bands `speak` reports to `on_level`
+
+
+def _levels(samples, rate):
+    """(bands, loudness) for a short slice of audio: BANDS values from 0 to 1, bass first, for a visualizer."""
+    mono = samples.mean(axis=1) if samples.ndim > 1 else samples
+    n = len(mono)
+    if n < 64:
+        return None
+    spectrum = np.abs(np.fft.rfft(mono * np.hanning(n))) / (n / 4)  # about 0..1 for a full-scale tone
+    freqs = np.fft.rfftfreq(n, 1 / rate)
+    edges = np.geomspace(80, min(8000, rate / 2 - 1), BANDS + 1)
+    bands = []
+    for low, high in zip(edges[:-1], edges[1:]):
+        picked = spectrum[(freqs >= low) & (freqs < high)]
+        bands.append(round(min(1.0, (float(picked.max()) * 5) ** 0.6) if picked.size else 0.0, 3))
+    return bands, round(min(1.0, float(np.sqrt(np.mean(mono**2))) * 4), 3)
+
+
+def _play(stream, audio, rate, on_level):
+    """Writes audio to the speakers; with `on_level`, in 30 ms slices that are each reported just before they play."""
+    if on_level is None:
+        stream.write(audio)
+        return
+    step = max(256, int(rate * 0.03))
+    for start in range(0, len(audio), step):
+        piece = audio[start:start + step]
+        levels = _levels(piece, rate)
+        if levels:
+            # The stream buffers ahead of what is audible, so tell the caller how long to wait before showing it
+            on_level(levels[0], levels[1], stream.latency)
+        stream.write(piece)
+
+
+def speak(text, on_state=None, on_level=None):
+    """Speaks text, synthesizing the next chunk while the current one plays.
+
+    `on_level(bands, loudness, delay_seconds)` is called a few dozen times a second with the sound about to be heard.
+    """
     chunks = _chunks(_speakable(text))
     if not chunks:
         return
@@ -279,7 +343,7 @@ def speak(text, on_state=None):
                 if stream is None:
                     stream = sd.OutputStream(samplerate=rate, channels=audio.shape[1], dtype="float32", latency="high")
                     stream.start()
-                stream.write(np.ascontiguousarray(audio, dtype=np.float32))
+                _play(stream, np.ascontiguousarray(audio, dtype=np.float32), rate, on_level)
             pending = []
         if stream is not None:
             # Trailing silence so the device buffer drains before the stream closes, or the last word gets clipped.

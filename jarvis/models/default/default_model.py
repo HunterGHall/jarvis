@@ -1,5 +1,6 @@
 import anthropic
 import json
+import os
 import re
 import sys
 import time
@@ -9,62 +10,21 @@ from pathlib import Path
 # Resolve paths relative to this file, not the working directory
 MODELS_DIR = Path(__file__).resolve().parent.parent
 ROOT_DIR = MODELS_DIR.parents[1]
-CONVERSATIONS_DIR = MODELS_DIR / "conversations"
-CONVERSATIONS_DIR.mkdir(exist_ok=True)
+# The saved conversation lives next to the code, unless the installed app says where the user's data goes
+CONVERSATIONS_DIR = Path(os.environ["JARVIS_DATA"]) / "conversations" if os.environ.get("JARVIS_DATA") else MODELS_DIR / "conversations"
+CONVERSATIONS_DIR.mkdir(parents=True, exist_ok=True)
 
 # Create a config template on first run, since the real one is gitignored
-CONFIG_PATH = ROOT_DIR / "config.conf"
-if not CONFIG_PATH.exists():
-    CONFIG_PATH.write_text(
-        "[anthropic]\n"
-        "anthropic_api_key = YOUR_KEY\n"
-        "model = claude-haiku-5-5\n"
-        "\n"
-        "[personal]\n"
-        "name = YOUR_NAME\n"
-        "zip_code = YOUR_ZIP\n"
-        "\n"
-        "[settings]\n"
-        "show_cost = False\n"
-        "\n"
-        "# Optional: a classic GitHub personal access token with the 'user' scope, to change your GitHub status\n"
-        "[github]\n"
-        "token =\n"
-        "\n"
-        "# Optional: a Fish Audio key, so Jarvis can speak aloud (fish.audio)\n"
-        "[fish]\n"
-        "api_key =\n",
-        encoding="utf-8",
-    )
+from jarvis.config_file import CONFIG_PATH, create_if_missing  # noqa: E402
+
+if create_if_missing():
     sys.exit(f"Created {CONFIG_PATH}. Fill in your details and run again.")
 
-# Get API key and model version
-config = ConfigParser()
-config.read(CONFIG_PATH)
-anthropic_api_key = config["anthropic"]["anthropic_api_key"]
-client = anthropic.Anthropic(api_key=anthropic_api_key)
-model_version = config["anthropic"].get("model", "claude-sonnet-5-5")
-show_cost = config.get("settings", "show_cost", fallback="").strip().strip('"').lower() in {"true", "yes", "on", "1"}
-# Redraw the screen at the new width when the terminal window is resized
-auto_resize = config.get("settings", "auto_resize", fallback="true").strip().strip('"').lower() not in {"false", "no", "off", "0"}
-# How many of your most recent messages (and Jarvis's replies to them) are kept and sent along with a new one
-try:
-    history_turns = max(2, int(config.get("settings", "history_turns", fallback="").strip().strip('"') or 12))
-except ValueError:
-    history_turns = 12
-
-# Get training data: the normal prompt, and the one used when replies are spoken aloud (voice mode)
+# The prompts: the normal one, and the one used when replies are spoken aloud (voice mode)
 with open(MODELS_DIR / "training_data" / "jarvis.txt", "r", encoding="utf-8") as file:
-    content = file.read()
+    _base_content = file.read()
 with open(MODELS_DIR / "training_data" / "jarvis-voice.txt", "r", encoding="utf-8") as file:
-    voice_content = file.read()
-
-# Tell the model who it is talking to
-user_name = config.get("personal", "name", fallback="").strip().strip('"')
-if user_name:
-    name_note = f"\n\nThe user's name is {user_name}, but address them as sir, never say there name unless directly asked."
-    content += name_note
-    voice_content += name_note
+    _base_voice_content = file.read()
 
 # The bash tool is declared by name only, so how it behaves here has to be explained in the system prompt
 shell_note = (
@@ -74,8 +34,41 @@ shell_note = (
     "terminal, just call the tool without asking permission in chat. Prefer your dedicated tools (files, apps, "
     "volume and so on) when one fits, and summarize command output rather than reading it out."
 )
-content += shell_note
-voice_content += shell_note
+
+
+def _text(parser, section, key, fallback=""):
+    return parser.get(section, key, fallback=fallback).strip().strip('"')
+
+
+def apply_config():
+    """Reads config.conf and applies it. Runs at start-up and again whenever the settings are changed, so a new key,
+    model, name or history length takes effect without restarting."""
+    global config, anthropic_api_key, client, model_version, show_cost, auto_resize, history_turns, user_name
+    global content, voice_content
+    config = ConfigParser()
+    config.read(CONFIG_PATH, encoding="utf-8")
+    anthropic_api_key = _text(config, "anthropic", "anthropic_api_key")
+    client = anthropic.Anthropic(api_key=anthropic_api_key or "YOUR_KEY")
+    model_version = _text(config, "anthropic", "model") or "claude-sonnet-5-5"
+    show_cost = _text(config, "settings", "show_cost").lower() in {"true", "yes", "on", "1"}
+    # Redraw the screen at the new width when the terminal window is resized
+    auto_resize = _text(config, "settings", "auto_resize", "true").lower() not in {"false", "no", "off", "0"}
+    # How many of your most recent messages (and Jarvis's replies to them) are kept and sent along with a new one
+    try:
+        history_turns = max(2, int(_text(config, "settings", "history_turns") or 12))
+    except ValueError:
+        history_turns = 12
+
+    # Tell the model who it is talking to
+    user_name = _text(config, "personal", "name")
+    name_note = ""
+    if user_name and user_name != "YOUR_NAME":
+        name_note = f"\n\nThe user's name is {user_name}, but address them as sir, never say there name unless directly asked."
+    content = _base_content + name_note + shell_note
+    voice_content = _base_voice_content + name_note + shell_note
+
+
+apply_config()
 
 # Utilities import each other by bare module name (e.g. `from location import ...`),
 # so each utility folder has to be on the path

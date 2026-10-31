@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:">
+  <title>jarvis</title>
+  <script src="theme.js"></script>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body data-input="text">
+  <div class="drag"></div>
+  <div class="notice" id="notice" hidden></div>
+
+  <main class="center">
+    <div class="core" id="core" data-mode="idle">
+      <svg id="core-svg" viewBox="0 0 1000 1000" aria-hidden="true"></svg>
+      <canvas id="viz" aria-hidden="true"></canvas>
+      <div class="face-status" id="face-status" aria-live="polite">
+        <i class="s-dot"></i>
+        <b class="s-main">ONLINE</b>
+        <small class="s-sub"></small>
+      </div>
+      <div class="calls" id="calls"></div>
+    </div>
+  </main>
+
+  <aside class="convo">
+    <div class="convo-head">
+      <h2>CONSOLE</h2>
+      <button class="gear" id="settings-open" title="Settings" aria-label="Settings">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>
+      </button>
+    </div>
+    <div class="modes" id="modes" role="radiogroup" aria-label="How you and Jarvis talk"></div>
+    <div class="mode-note" id="mode-note"></div>
+    <div id="chat" aria-live="polite">
+      <section class="hero" id="hero">
+        <h1 id="greeting">Good day.</h1>
+        <p>Ask me anything, or tell me what to do on your PC.</p>
+        <div class="suggestions">
+          <button data-prompt="What's the weather like today?">WEATHER</button>
+          <button data-prompt="What's on my system right now? CPU, memory, disks.">SYSTEM</button>
+          <button data-prompt="Give me the top headlines.">HEADLINES</button>
+          <button data-prompt="Set a timer for 10 minutes.">TIMER</button>
+        </div>
+      </section>
+    </div>
+    <form id="form" autocomplete="off">
+      <textarea id="input" rows="1" placeholder="Message Jarvis" aria-label="Message" autofocus></textarea>
+      <button type="submit" class="send" id="send" aria-label="Send">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="square"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+      </button>
+    </form>
+  </aside>
+
+  <div class="overlay" id="confirm" hidden>
+    <div class="dialog" role="alertdialog" aria-labelledby="confirm-title">
+      <h2 id="confirm-title">APPROVAL REQUIRED</h2>
+      <pre id="confirm-message"></pre>
+      <div class="buttons">
+        <button class="deny" id="confirm-no">DENY</button>
+        <button class="allow" id="confirm-yes">ALLOW</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="welcome" id="welcome" hidden>
+    <form class="wl-card" id="welcome-form" autocomplete="off">
+      <span class="logo-badge"><img src="assets/logo.png" alt="J.A.R.V.I.S."></span>
+      <h1>Welcome</h1>
+      <p class="wl-lead">Let's get Jarvis ready. Your keys are saved in config.conf on this PC, and only ever sent to the service they belong to.</p>
+      <label class="wl-field">
+        <span>Anthropic API key <em>required</em></span>
+        <input id="wl-anthropic" type="password" placeholder="sk-ant-…" spellcheck="false" autocomplete="off">
+        <small>Lets Jarvis think. <a href="https://console.anthropic.com/settings/keys">Get a key</a></small>
+      </label>
+      <label class="wl-field">
+        <span>Fish Audio API key <em class="opt">optional</em></span>
+        <input id="wl-fish" type="password" placeholder="Only needed for Jarvis to speak aloud" spellcheck="false" autocomplete="off">
+        <small>Lets Jarvis talk back. <a href="https://fish.audio">Get a key</a></small>
+      </label>
+      <div class="wl-two">
+        <label class="wl-field"><span>Your name <em class="opt">optional</em></span><input id="wl-name" type="text" spellcheck="false"></label>
+        <label class="wl-field"><span>Zip code <em class="opt">optional</em></span><input id="wl-zip" type="text" inputmode="numeric" spellcheck="false"></label>
+      </div>
+      <div class="wl-status" id="wl-status"></div>
+      <div class="wl-actions">
+        <button type="button" class="sp-link" id="wl-skip">SKIP FOR NOW</button>
+        <button type="submit" class="sp-save" id="wl-go" disabled>GET STARTED</button>
+      </div>
+      <p class="wl-foot">You can change all of this later in Settings (the gear in the console).</p>
+    </form>
+  </div>
+
+  <div class="settings-page" id="settings-page" hidden>
+    <div class="sp-inner">
+      <header class="sp-head">
+        <button class="sp-back" id="settings-back">&larr; BACK</button>
+        <h1>Settings</h1>
+        <span class="sp-status" id="settings-status"></span>
+      </header>
+      <div class="sp-body">
+        <nav class="sp-nav" id="settings-nav"></nav>
+        <div class="sp-form" id="settings-form"></div>
+      </div>
+      <footer class="sp-foot">
+        <span class="sp-hint" id="settings-hint">Saved to config.conf in the project folder.</span>
+        <button class="sp-save" id="settings-save" disabled>SAVE CHANGES</button>
+      </footer>
+    </div>
+  </div>
+
+  <script src="markdown.js"></script>
+  <script src="core.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
